@@ -148,7 +148,14 @@
         </div>
       </div>
       <label class="fld">model <span style="color:var(--faint)">— pick one</span>
-        <select id="model"><option value="">(server default)</option></select>
+        <select id="model">
+          <option value="">server default — claude-sonnet-4.6</option>
+          <option value="openrouter/anthropic/claude-opus-4.8">Claude Opus 4.8 · $5 / $25</option>
+          <option value="openrouter/anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 · $3 / $15</option>
+          <option value="openrouter/openai/gpt-5.5">GPT-5.5 · $5 / $30</option>
+          <option value="openrouter/deepseek/deepseek-v4-pro">DeepSeek V4 Pro · $0.43 / $1</option>
+          <option value="__custom__">Custom…</option>
+        </select>
       </label>
       <input type="text" id="modelCustom" class="hidden" style="margin-top:8px" placeholder="custom model id, e.g. openrouter/…" />
       <button class="primary" id="go">Solve</button>
