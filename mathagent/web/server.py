@@ -20,7 +20,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -157,7 +157,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "studio-v6-katex",
+                "ui": "studio-v7-stream",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],
@@ -210,6 +210,62 @@ def create_app(
                 "usage": getattr(agent, "last_usage", {}),
                 "steps": traj.steps,
             }
+        )
+
+    @app.post("/api/solve_stream")
+    async def solve_stream(req: SolveRequest) -> StreamingResponse:
+        """Live streaming: emits one NDJSON line per agent step (with running
+        token/cost usage), then a final ``done`` line with the full result."""
+        import asyncio
+        import queue
+        import threading
+
+        cfg = app.state.cfg
+        prov = build_provider(req.provider or cfg["provider_kind"], model=req.model or cfg["model"])
+        py = cfg["enable_python"] if req.enable_python is None else req.enable_python
+        ln = cfg["enable_lean"] if req.enable_lean is None else req.enable_lean
+        tools = default_registry(python=py, lean=ln)
+        agent = MathAgent(cfg["workspace"], prov, tools=tools, max_steps=req.max_steps)
+        model = req.model or _resolved_model()
+
+        q: queue.Queue = queue.Queue()
+
+        def run() -> None:
+            t0 = time.time()
+            try:
+                traj = agent.solve(
+                    Task(id=uuid.uuid4().hex[:8], input=req.problem), on_event=q.put
+                )
+                files: dict[str, str] = {}
+                if req.format != "none":
+                    name = f"sol-{uuid.uuid4().hex[:8]}"
+                    produced = export(traj.output, cfg["out_dir"], name=name, fmt=req.format)
+                    for kind, p in produced.items():
+                        if kind in ("tex", "pdf", "docx"):
+                            files[kind] = f"/files/{Path(p).name}"
+                q.put({"ev": "done", "result": {
+                    "solution": traj.output, "answer": extract_boxed(traj.output),
+                    "files": files, "model": model, "elapsed_s": round(time.time() - t0, 2),
+                    "usage": getattr(agent, "last_usage", {}), "steps": traj.steps,
+                }})
+            except Exception as e:
+                q.put({"ev": "error", "error": f"{type(e).__name__}: {e}"})
+            finally:
+                q.put(None)
+
+        threading.Thread(target=run, daemon=True).start()
+
+        async def gen():
+            loop = asyncio.get_event_loop()
+            while True:
+                ev = await loop.run_in_executor(None, q.get)
+                if ev is None:
+                    break
+                yield json.dumps(ev) + "\n"
+
+        return StreamingResponse(
+            gen(), media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
 
     return app

@@ -104,13 +104,25 @@ class MathAgent(BaseAgent):
         if usage.get("model"):
             t["model"] = usage["model"]
 
-    def solve(self, task: Task) -> Trajectory:
+    def solve(self, task: Task, on_event=None) -> Trajectory:
+        """Solve ``task``. If ``on_event`` is given, it is called with a dict for
+        each step as it happens (live streaming): an ``llm`` event after every
+        model turn and a ``tool`` event after every tool run, each carrying the
+        running token/cost usage so far under ``running``."""
         messages = [
             LLMMessage("system", self._system()),
             LLMMessage("user", self._user(task)),
         ]
         steps: list[dict] = []
         self.last_usage = {}
+
+        def _emit(ev: dict) -> None:
+            if on_event:
+                ev["running"] = dict(self.last_usage)
+                try:
+                    on_event(ev)
+                except Exception:
+                    pass
 
         def _traj(output: str) -> Trajectory:
             return Trajectory(
@@ -131,6 +143,8 @@ class MathAgent(BaseAgent):
                 {"type": "llm", "turn": turn + 1, "text": text,
                  "reasoning": reasoning, "usage": resp.usage or {}}
             )
+            _emit({"ev": "step", "type": "llm", "turn": turn + 1,
+                   "reasoning": reasoning, "usage": resp.usage or {}})
 
             final = _FINAL_RE.search(text)
             if final:
@@ -146,8 +160,10 @@ class MathAgent(BaseAgent):
 
             results = []
             for name, body in calls:
+                _emit({"ev": "step", "type": "tool_start", "tool": name, "input": body})
                 out = self.tools.run(name, body)
                 steps.append({"type": "tool", "tool": name, "input": body, "output": out})
+                _emit({"ev": "step", "type": "tool", "tool": name, "input": body, "output": out})
                 results.append(f"<tool:{name}> result:\n{out}")
             messages.append(
                 LLMMessage(

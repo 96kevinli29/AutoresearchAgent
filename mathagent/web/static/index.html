@@ -118,7 +118,7 @@
   <div class="logo"><span class="mark">∑</span> mathagent</div>
   <span class="tagline">math solving &amp; proofs</span>
   <div class="right">
-    <span class="badge">studio · v6</span>
+    <span class="badge">studio · v7</span>
     <span class="dot" title="online"></span>
     <span id="cfg">…</span>
   </div>
@@ -304,23 +304,62 @@ function addHistory(d){
     `<div class="it" data-h="${i}"><div class="q">${escapeHtml(h.problem)}</div><div class="a">${escapeHtml(h.answer||'—')} · ${escapeHtml((h.model||'').replace('openrouter/',''))}</div></div>`).join('');
   $('history').querySelectorAll('[data-h]').forEach(el=>el.addEventListener('click',()=>renderResult(state.history[+el.dataset.h])));
 }
+function liveMeterHtml(run, t0){
+  const u=run||{};
+  return `<b>${u.total_tokens||0}</b> tok &nbsp;·&nbsp; <b>$${Number(u.cost_usd||0).toFixed(4)}</b>`
+       + ` &nbsp;·&nbsp; <b>${((Date.now()-t0)/1000).toFixed(1)}s</b>`
+       + ` &nbsp;·&nbsp; ${u.llm_calls||0} calls`;
+}
 async function solve(){
   const problem=$('problem').value.trim(); if(!problem) return;
   const btn=$('go'); btn.disabled=true;
   $('emptyState').classList.add('hidden');
   const body=$('resultBody'); body.classList.remove('hidden');
   const t0=Date.now();
-  body.innerHTML=`<div style="color:var(--muted);padding:8px 2px"><span class="spinner"></span> &nbsp;solving… <span id="el">0.0s</span></div>`;
-  const tick=setInterval(()=>{const e=$('el'); if(e) e.textContent=((Date.now()-t0)/1000).toFixed(1)+'s';},100);
+  let run={};
+  body.innerHTML=`
+    <div class="answer-banner" style="background:var(--surface2);border-color:var(--line)">
+      <div><div class="lab">working…</div><div class="val"><span class="spinner"></span> <span id="liveAct">starting…</span></div></div>
+      <span class="verified" id="liveMeter" style="background:var(--surface);color:var(--muted);border-color:var(--line)">0 tok · $0.0000 · 0.0s</span>
+    </div>
+    <div class="timeline" id="liveTl"></div>`;
+  const liveSteps=[];
+  const tick=setInterval(()=>{const e=$('liveMeter'); if(e) e.innerHTML=liveMeterHtml(run,t0);},100);
+  const setAct=t=>{const e=$('liveAct'); if(e) e.textContent=t;};
+  const redraw=()=>{const e=$('liveTl'); if(e){ e.innerHTML=timelineHtml(liveSteps); typeset(e);} };
+
   try{
     const req={problem, format:$('format').value, enable_python:$('python').checked, enable_lean:$('lean').checked};
     let m=$('model').value; if(m==='__custom__') m=$('modelCustom').value.trim(); if(m) req.model=m;
-    const r=await fetch('/api/solve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
-    const d=await r.json(); clearInterval(tick);
-    if(!r.ok||d.error){ body.innerHTML=`<div class="err">${escapeHtml(d.error||('HTTP '+r.status))}</div>`; return; }
-    d.problem=problem; renderResult(d); addHistory(d);
-  }catch(e){ clearInterval(tick); body.innerHTML=`<div class="err">${escapeHtml(e)}</div>`; }
-  finally{ btn.disabled=false; }
+    const r=await fetch('/api/solve_stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
+    if(!r.ok||!r.body){ const d=await r.json().catch(()=>({})); throw new Error(d.error||('HTTP '+r.status)); }
+    const reader=r.body.getReader(); const dec=new TextDecoder(); let buf='';
+    let finished=false;
+    while(!finished){
+      const {value,done}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf('\n'))>=0){
+        const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+        if(!line) continue;
+        const ev=JSON.parse(line);
+        if(ev.ev==='step'){
+          if(ev.running) run=ev.running;
+          if(ev.type==='llm'){ setAct(`step ${ev.turn}: reasoning`); liveSteps.push(ev); redraw(); }
+          else if(ev.type==='tool_start'){ setAct(`running ${ev.tool}…`); }
+          else if(ev.type==='tool'){ setAct(`${ev.tool} done`); liveSteps.push(ev); redraw(); }
+          $('liveMeter').innerHTML=liveMeterHtml(run,t0);
+        } else if(ev.ev==='done'){
+          clearInterval(tick); finished=true;
+          const d=ev.result; d.problem=problem; renderResult(d); addHistory(d);
+        } else if(ev.ev==='error'){
+          clearInterval(tick); finished=true;
+          body.innerHTML=`<div class="err">${escapeHtml(ev.error)}</div>`;
+        }
+      }
+    }
+  }catch(e){ clearInterval(tick); body.innerHTML=`<div class="err">${escapeHtml(e.message||e)}</div>`; }
+  finally{ clearInterval(tick); btn.disabled=false; }
 }
 $('go').addEventListener('click', solve);
 $('problem').addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') solve(); });
