@@ -135,6 +135,7 @@ def create_app(
     )
 
     app.mount("/files", StaticFiles(directory=out_dir), name="files")
+    app.mount("/static", StaticFiles(directory=str(_STATIC)), name="static")
 
     _NOCACHE = {"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"}
 
@@ -156,7 +157,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "studio-v5-livemodels",
+                "ui": "studio-v6-katex",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],

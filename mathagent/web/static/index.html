@@ -7,13 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<script>
-  window.MathJax = {
-    tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
-    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
-  };
-</script>
-<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<link rel="stylesheet" href="/static/katex/katex.min.css">
+<script defer src="/static/katex/katex.min.js"></script>
+<script defer src="/static/katex/contrib/auto-render.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --surface:#ffffff; --surface2:#f8f9fa; --surface3:#f1f3f4;
@@ -122,7 +118,7 @@
   <div class="logo"><span class="mark">∑</span> mathagent</div>
   <span class="tagline">math solving &amp; proofs</span>
   <div class="right">
-    <span class="badge">studio · v5</span>
+    <span class="badge">studio · v6</span>
     <span class="dot" title="online"></span>
     <span id="cfg">…</span>
   </div>
@@ -198,6 +194,34 @@ const EXAMPLES = [
 ];
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
+function typeset(el){
+  if(window.renderMathInElement) renderMathInElement(el,{
+    delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},
+                {left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
+    throwOnError:false
+  });
+}
+// Convert a LaTeX document body (the model output) into readable HTML + math.
+function latexToHtml(src){
+  src=String(src||'');
+  const math=[];
+  src=src.replace(/\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^$]*\$|\\\([\s\S]*?\\\)/g, m=>{math.push(m);return '@@M'+(math.length-1)+'@@';});
+  src=src.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  src=src
+    .replace(/\\textbf\{([^{}]*)\}/g,'<b>$1</b>')
+    .replace(/\\(textit|emph)\{([^{}]*)\}/g,'<i>$2</i>')
+    .replace(/\\(sub)?section\*?\{([^{}]*)\}/g,'<h4 style="margin:14px 0 4px">$2</h4>')
+    .replace(/\\begin\{enumerate\}/g,'<ol>').replace(/\\end\{enumerate\}/g,'</ol>')
+    .replace(/\\begin\{itemize\}/g,'<ul>').replace(/\\end\{itemize\}/g,'</ul>')
+    .replace(/\\begin\{[^}]*\}/g,'').replace(/\\end\{[^}]*\}/g,'')
+    .replace(/\\item\s*/g,'<li>')
+    .replace(/\\checkmark/g,'✓').replace(/\\quad/g,'&nbsp;&nbsp;').replace(/\\[,;:]/g,' ')
+    .replace(/\\\\/g,'<br>')
+    .replace(/\n[ \t]*\n/g,'<br><br>');
+  src=src.replace(/@@M(\d+)@@/g,(m,i)=>math[+i]);
+  return src;
+}
+
 fetch('/api/health').then(r=>r.json()).then(h=>{
   $('cfg').textContent = `${h.model} · python ${h.python?'on':'off'} · lean ${h.lean?'on':'off'}`;
 }).catch(()=>{ $('cfg').textContent=''; });
@@ -260,7 +284,7 @@ function renderResult(d){
       <div class="tab" data-t="proc">Process <span class="tok">(${(d.steps||[]).length})</span></div>
       <div class="tab" data-t="tex">LaTeX</div></div>
     <div>
-      <div data-p="sol"><div class="sol">${escapeHtml(d.solution)}</div>
+      <div data-p="sol"><div class="sol">${latexToHtml(d.solution)}</div>
         <div class="row-actions">${Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('')}</div></div>
       <div data-p="proc" class="hidden"><div class="timeline">${timelineHtml(d.steps)}</div></div>
       <div data-p="tex" class="hidden"><pre>${escapeHtml(d.solution)}</pre>
@@ -272,7 +296,7 @@ function renderResult(d){
     body.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==t.dataset.t));
   }));
   const copy=$('copyTex'); if(copy) copy.addEventListener('click',()=>{navigator.clipboard.writeText(d.solution||'');copy.textContent='Copied ✓';setTimeout(()=>copy.textContent='Copy LaTeX',1200);});
-  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([body]);
+  typeset(body);
 }
 function addHistory(d){
   state.history.unshift(d);
