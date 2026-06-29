@@ -46,12 +46,72 @@ def extract_boxed(text: str) -> str | None:
     return "".join(out).strip()
 
 
-def normalize(s: str | None) -> str:
+_LATEX_SPACES = ["\\left", "\\right", "\\,", "\\!", "\\:", "\\;", "\\quad", "\\qquad", "\\ "]
+_FRAC_RE = re.compile(r"\\frac\{([^{}]*)\}\{([^{}]*)\}")
+
+
+def clean_latex(s: str | None) -> str:
+    """Turn a LaTeX answer fragment into a plain math expression string."""
     if s is None:
         return ""
-    s = s.strip().strip("$").replace(" ", "")
-    s = s.replace("\\left", "").replace("\\right", "").replace("\\,", "")
-    return s.lower().rstrip(".")
+    s = s.strip().strip("$").strip()
+    s = s.replace("\\dfrac", "\\frac").replace("\\tfrac", "\\frac")
+    for _ in range(5):  # \frac{a}{b} -> ((a)/(b)), repeat for stacked fractions
+        s2 = _FRAC_RE.sub(r"((\1)/(\2))", s)
+        if s2 == s:
+            break
+        s = s2
+    s = s.replace("\\cdot", "*").replace("\\times", "*")
+    for t in _LATEX_SPACES:
+        s = s.replace(t, "")
+    s = s.replace("^", "**").replace(" ", "")
+    return s
+
+
+def normalize(s: str | None) -> str:
+    return clean_latex(s).lower().rstrip(".")
+
+
+def _to_expr(s: str):
+    import sympy as sp
+
+    return sp.sympify(clean_latex(s))
+
+
+def _expr_equal(a: str, b: str) -> bool:
+    try:
+        import sympy as sp
+
+        return bool(sp.simplify(_to_expr(a) - _to_expr(b)) == 0)
+    except Exception:
+        return False
+
+
+def _multiset_equal(pred: str, gold: str) -> bool:
+    """Compare comma/semicolon-separated answer lists as multisets (order-free)."""
+    pp = [p for p in re.split(r"[,;]", pred) if p.strip()]
+    gg = [p for p in re.split(r"[,;]", gold) if p.strip()]
+    if len(pp) != len(gg) or len(pp) < 2:
+        return False
+    used = [False] * len(pp)
+    for g in gg:
+        for i, p in enumerate(pp):
+            if not used[i] and (normalize(p) == normalize(g) or _expr_equal(p, g)):
+                used[i] = True
+                break
+        else:
+            return False
+    return True
+
+
+def answers_match(pred: str | None, gold: str, check: str) -> bool:
+    if pred is None:
+        return False
+    if normalize(pred) == normalize(gold):
+        return True
+    if _multiset_equal(pred, gold):
+        return True
+    return _expr_equal(pred, gold)
 
 
 class MathBenchmark(BenchmarkAdapter):
@@ -89,18 +149,6 @@ class MathBenchmark(BenchmarkAdapter):
             )
 
         gold = str(meta.get("answer", ""))
-        ok = False
+        ok = answers_match(pred, gold, check)
         detail = {"check": check, "pred": pred, "gold": gold}
-
-        if check == "sympy":
-            try:
-                import sympy as sp
-
-                ok = bool(sp.simplify(sp.sympify(pred) - sp.sympify(gold)) == 0)
-            except Exception as e:
-                detail["error"] = str(e)
-                ok = normalize(pred) == normalize(gold)
-        else:  # "answer"
-            ok = normalize(pred) == normalize(gold)
-
         return Feedback(success=ok, score=1.0 if ok else 0.0, detail=json.dumps(detail))

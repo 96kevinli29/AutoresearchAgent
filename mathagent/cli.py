@@ -21,21 +21,19 @@ from pathlib import Path
 
 from agent_evolve import EvolveConfig, Evolver, Task
 
+from ._workspace import resolve_workspace
 from .agent import MathAgent
 from .benchmarks import MathBenchmark
 from .engine import MathEvolutionEngine
 from .llm import build_provider
 from .tools import default_registry, export
 
-_DEFAULT_WS = str(Path(__file__).resolve().parent.parent / "workspace")
-
 
 def _make_agent(args) -> MathAgent:
-    provider = build_provider(
-        args.provider, model=getattr(args, "model", None)
-    )
+    provider = build_provider(args.provider, model=getattr(args, "model", None))
     tools = default_registry(python=not args.no_python, lean=args.lean)
-    return MathAgent(args.workspace, provider, tools=tools, max_steps=args.max_steps)
+    ws = resolve_workspace(args.workspace)
+    return MathAgent(ws, provider, tools=tools, max_steps=args.max_steps)
 
 
 def cmd_solve(args) -> int:
@@ -92,7 +90,7 @@ def cmd_evolve(args) -> int:
     if work_ws.exists() and args.fresh:
         shutil.rmtree(work_ws)
     if not work_ws.exists():
-        shutil.copytree(args.workspace, work_ws)
+        shutil.copytree(resolve_workspace(args.workspace), work_ws)
 
     provider = build_provider(args.provider, model=args.model)
     tools = default_registry(python=not args.no_python, lean=args.lean)
@@ -134,6 +132,34 @@ def cmd_evolve(args) -> int:
     return 0
 
 
+def cmd_install_lean(args) -> int:
+    import subprocess
+
+    from .tools.lean_verify import INSTALL_HINT, lean_available
+
+    if lean_available():
+        print("Lean toolchain already on PATH (elan/lean found).")
+        return 0
+    print(INSTALL_HINT)
+    if not args.run:
+        print("\nRe-run with --run to perform the elan install now.")
+        return 0
+    print("\nInstalling elan + Lean (this downloads a toolchain)…")
+    sh = (
+        "curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y && "
+        "source $HOME/.elan/env && elan default leanprover/lean4:stable && lean --version"
+    )
+    rc = subprocess.call(["bash", "-lc", sh])
+    if rc == 0:
+        print(
+            "\nLean installed. Add `source $HOME/.elan/env` to your shell, then use "
+            "`--lean`. For real proofs you still need Mathlib (heavy): see README."
+        )
+    else:
+        print("\nInstall failed. Follow the manual steps above.")
+    return rc
+
+
 def cmd_serve(args) -> int:
     import uvicorn
 
@@ -157,7 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # shared options, available on every subcommand (after the subcommand name)
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--workspace", default=_DEFAULT_WS, help="evolvable workspace dir")
+    common.add_argument("--workspace", default=None, help="evolvable workspace dir (default: ./workspace, auto-created from the bundled seed)")
     common.add_argument("--provider", default="litellm", choices=["litellm", "mock"])
     common.add_argument("--model", default=None, help="LiteLLM model id, e.g. anthropic/claude-opus-4-6")
     common.add_argument("--no-python", action="store_true", help="disable the Python tool")
@@ -198,6 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
     sv.add_argument("--port", type=int, default=8000)
     sv.add_argument("--out-dir", default="out")
     sv.set_defaults(func=cmd_serve)
+
+    il = sub.add_parser("install-lean", help="guide/perform Lean toolchain install")
+    il.add_argument("--run", action="store_true", help="actually run the elan installer")
+    il.set_defaults(func=cmd_install_lean)
 
     return p
 

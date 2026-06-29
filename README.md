@@ -24,19 +24,29 @@ workspace/            EVOLVABLE: manifest, prompts/system.md, skills/*/SKILL.md,
 data/seed_problems.jsonl
 ```
 
+## Install
+
+```bash
+# online (no checkout needed):
+pip install "git+https://github.com/96kevinli29/AutoresearchAgent.git"
+
+# local (from a clone):
+pip install .            # or: pip install -e .  for dev
+```
+
+Everything works out of the box after install — the seed workspace is bundled and
+auto-created in `./workspace` on first run; CLI, web UI, and docx export are all
+included. (Lean is optional and installed separately, see below.)
+
 ## Quickstart
 
 ```bash
-# 1. env (already bootstrapped with uv)
-source .venv/bin/activate
-uv pip install -e .
-
-# 2. smoke test (no API key needed)
+# 1. smoke test (no API key needed)
 mathagent solve "Compute 2+2." --provider mock --format pdf
 
-# 3. real run
-cp .env.example .env   # set MATHAGENT_MODEL + API key
-mathagent solve "Find all real roots of x^2-5x+6=0." --format pdf
+# 2. real run
+cp .env.example .env   # set MATHAGENT_MODEL + API key (OpenRouter / Anthropic / OpenAI / …)
+mathagent solve "Find all real roots of x^2-5x+6=0." --format pdf   # or --format docx
 mathagent eval data/seed_problems.jsonl
 
 # 4. self-improve the workspace (verifier-grounded evolution, git-tracked)
@@ -50,7 +60,18 @@ mathagent serve --provider mock --port 8000  # no-key demo
 #   GET /              chat UI (MathJax)
 #   POST /api/solve    {problem, format, model?, enable_python?, enable_lean?}
 #   GET /files/<name>  generated .tex/.pdf/.docx
+
+# 6. (optional) enable Lean formal verification
+mathagent install-lean          # prints guidance
+mathagent install-lean --run    # installs elan + Lean toolchain (Mathlib is separate/heavy)
+mathagent solve "..." --lean    # use Lean as a verification capability
 ```
+
+## Verification capabilities (toggleable)
+
+- **Python** (`sympy`/`numpy`) — on by default; `--no-python` to disable.
+- **Lean 4** — off by default; opt in with `--lean`. If Lean isn't installed, the tool
+  returns install guidance and you run `mathagent install-lean --run`.
 
 ## Evolution (M2)
 
@@ -66,5 +87,9 @@ self-test lifts a stub agent from score **0.0 → 1.0** by evolving one skill.
 - **M1** CLI MVP: solve → Python-verify → LaTeX/PDF ✅
 - **M2** evolution loop (verifier-grounded, self-gating, git-tracked) ✅
 - **M4** web frontend (FastAPI + MathJax chat UI) sharing the same core ✅
-- **M3** Lean verification (elan + mathlib + Lean REPL)
-- **M5** docx export + packaging for local & online install
+- **M5** docx export + pip-installable (bundled workspace, local & online) ✅
+- **Lean** verification — optional capability with guided install (`mathagent install-lean`);
+  REPL bridge + Mathlib wiring lands when enabled
+
+End-to-end verified with a real model (Sonnet 4.6 via OpenRouter): seed set scores **6/6**;
+CLI and web both produce LaTeX/PDF/docx.

@@ -8,11 +8,12 @@ dependencies = [
     "litellm>=1.0",
     "sympy>=1.12",
     "pyyaml>=6.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pypandoc-binary>=1.13",
 ]
 
 [project.optional-dependencies]
-web = ["fastapi>=0.110", "uvicorn>=0.29"]
-docx = ["pypandoc-binary>=1.13"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]

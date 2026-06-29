@@ -28,7 +28,6 @@ from ..llm import build_provider
 from ..tools import default_registry, export
 
 _STATIC = Path(__file__).resolve().parent / "static"
-_DEFAULT_WS = str(Path(__file__).resolve().parent.parent.parent / "workspace")
 
 
 class SolveRequest(BaseModel):
@@ -42,7 +41,7 @@ class SolveRequest(BaseModel):
 
 
 def create_app(
-    workspace: str = _DEFAULT_WS,
+    workspace: str | None = None,
     provider_kind: str = "litellm",
     model: str | None = None,
     enable_python: bool = True,
@@ -50,8 +49,10 @@ def create_app(
     out_dir: str = "out",
 ) -> FastAPI:
     from .._env import load_dotenv
+    from .._workspace import resolve_workspace
 
     load_dotenv()
+    workspace = resolve_workspace(workspace)
     app = FastAPI(title="mathagent", version="0.1.0")
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
