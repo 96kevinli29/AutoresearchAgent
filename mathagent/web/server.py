@@ -31,6 +31,16 @@ from ..tools import default_registry, export
 
 _STATIC = Path(__file__).resolve().parent / "static"
 
+# Curated OpenRouter models that do well on math/proof tasks (price = in/out per 1M tok).
+_CURATED_MODELS = [
+    {"id": "openrouter/anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6 — strong, balanced", "price": "$3 / $15"},
+    {"id": "openrouter/anthropic/claude-opus-4.8", "label": "Claude Opus 4.8 — strongest", "price": "$5 / $25"},
+    {"id": "openrouter/openai/gpt-5.2", "label": "GPT-5.2 — strong general + math", "price": "$1.75 / $14"},
+    {"id": "openrouter/deepseek/deepseek-r1-0528", "label": "DeepSeek R1 — math reasoning, cheap", "price": "$0.50 / $2.15"},
+    {"id": "openrouter/qwen/qwen3-235b-a22b-thinking-2507", "label": "Qwen3 235B Thinking — math, very cheap", "price": "$0.10 / $0.10"},
+    {"id": "openrouter/google/gemini-2.5-pro", "label": "Gemini 2.5 Pro", "price": "$1.25 / $10"},
+]
+
 
 class SolveRequest(BaseModel):
     problem: str
@@ -97,6 +107,12 @@ def create_app(
                 "lean": cfg["enable_lean"],
             },
             headers=_NOCACHE,
+        )
+
+    @app.get("/api/models")
+    def models() -> JSONResponse:
+        return JSONResponse(
+            {"default": _resolved_model(), "models": _CURATED_MODELS}, headers=_NOCACHE
         )
 
     @app.post("/api/solve")

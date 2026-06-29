@@ -80,8 +80,9 @@ e.g. Find all real solutions of x^2 - 5x + 6 = 0."></textarea>
         </select>
       </label>
       <label>model
-        <input type="text" id="model" placeholder="(server default)" size="28" />
+        <select id="model"><option value="">(server default)</option></select>
       </label>
+      <input type="text" id="modelCustom" placeholder="custom model id, e.g. openrouter/…" size="30" style="display:none" />
       <label><input type="checkbox" id="python" checked /> Python</label>
       <label><input type="checkbox" id="lean" /> Lean</label>
       <button id="go">Solve</button>
@@ -106,6 +107,17 @@ let timerId = null;
 fetch('/api/health').then(r=>r.json()).then(h=>{
   $('cfg').textContent = `model: ${h.model}  ·  provider: ${h.provider}  ·  python: ${h.python}  ·  lean: ${h.lean}`;
 }).catch(()=>{ $('cfg').textContent=''; });
+
+fetch('/api/models').then(r=>r.json()).then(d=>{
+  const sel = $('model');
+  sel.innerHTML = `<option value="">server default — ${d.default}</option>`
+    + (d.models||[]).map(m=>`<option value="${m.id}">${m.label} · ${m.price}</option>`).join('')
+    + `<option value="__custom__">Custom…</option>`;
+}).catch(()=>{});
+
+$('model').addEventListener('change', e=>{
+  $('modelCustom').style.display = e.target.value === '__custom__' ? '' : 'none';
+});
 
 function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function chip(k,v){ return `<span class="chip"><span class="k">${k}</span><b>${v}</b></span>`; }
@@ -163,7 +175,9 @@ async function solve(){
   try{
     const body = { problem, format: $('format').value,
                    enable_python: $('python').checked, enable_lean: $('lean').checked };
-    const m = $('model').value.trim(); if(m) body.model = m;
+    let m = $('model').value;
+    if (m === '__custom__') m = $('modelCustom').value.trim();
+    if (m) body.model = m;
     const r = await fetch('/api/solve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
     const data = await r.json();
     clearInterval(timerId);
