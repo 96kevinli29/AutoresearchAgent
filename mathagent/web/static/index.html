@@ -7,21 +7,23 @@
 <script>
   window.MathJax = {
     tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
-    options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
   };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <style>
-  :root { --bg:#0f1117; --panel:#171a23; --line:#262b38; --fg:#e6e9ef; --muted:#9aa3b2; --accent:#6ea8fe; }
+  :root { --bg:#0f1117; --panel:#171a23; --line:#262b38; --fg:#e6e9ef; --muted:#9aa3b2;
+          --accent:#6ea8fe; --green:#5fd39a; --chip:#1f2430; }
   * { box-sizing: border-box; }
   body { margin:0; font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
          background:var(--bg); color:var(--fg); }
-  header { padding:14px 22px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:12px; }
+  header { padding:14px 22px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
   header h1 { font-size:18px; margin:0; letter-spacing:.3px; }
   header .sub { color:var(--muted); font-size:13px; }
-  main { max-width:920px; margin:0 auto; padding:22px; }
+  main { max-width:960px; margin:0 auto; padding:22px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:18px; }
-  textarea { width:100%; min-height:110px; resize:vertical; background:#0d0f15; color:var(--fg);
+  h3 { font-size:13px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); margin:18px 0 8px; }
+  textarea { width:100%; min-height:96px; resize:vertical; background:#0d0f15; color:var(--fg);
              border:1px solid var(--line); border-radius:8px; padding:11px; font-size:15px; }
   .row { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; }
   label { font-size:13px; color:var(--muted); display:flex; gap:6px; align-items:center; }
@@ -30,14 +32,29 @@
   button { background:var(--accent); color:#0b1020; border:0; border-radius:8px; padding:10px 18px;
            font-weight:600; cursor:pointer; font-size:14px; }
   button:disabled { opacity:.55; cursor:default; }
-  .answer { font-size:15px; }
-  .answer .tag { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.6px; }
+  /* stats bar */
+  .stats { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  .chip { background:var(--chip); border:1px solid var(--line); border-radius:999px; padding:4px 11px; font-size:12.5px; }
+  .chip .k { color:var(--muted); margin-right:5px; }
+  .chip b { color:var(--fg); font-weight:600; }
+  .answer { font-size:16px; margin:6px 0; }
+  .answer .tag { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.6px; margin-right:8px; }
   pre { background:#0d0f15; border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto;
-        font-size:12.5px; color:#c8cedb; }
+        font-size:12.5px; color:#c8cedb; margin:6px 0; white-space:pre-wrap; }
   .files a { color:var(--accent); margin-right:14px; text-decoration:none; }
   .muted { color:var(--muted); }
-  details summary { cursor:pointer; color:var(--muted); font-size:13px; }
   .err { color:#ff8a8a; }
+  /* timeline */
+  .timeline { border-left:2px solid var(--line); margin-left:6px; padding-left:16px; }
+  .turn { position:relative; margin:0 0 16px; }
+  .turn::before { content:''; position:absolute; left:-23px; top:4px; width:10px; height:10px; border-radius:50%;
+                  background:var(--panel); border:2px solid var(--accent); }
+  .turn.tool::before { border-color:var(--green); }
+  .turn.final::before { background:var(--green); border-color:var(--green); }
+  .turn .head { font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:center; }
+  .turn .head b { color:var(--fg); }
+  .turn .body { margin-top:4px; }
+  .tok { font-size:11px; color:var(--muted); }
   .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--muted);
              border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -62,7 +79,7 @@ e.g. Find all real solutions of x^2 - 5x + 6 = 0."></textarea>
         </select>
       </label>
       <label>model
-        <input type="text" id="model" placeholder="(server default)" size="26" />
+        <input type="text" id="model" placeholder="(server default)" size="28" />
       </label>
       <label><input type="checkbox" id="python" checked /> Python</label>
       <label><input type="checkbox" id="lean" /> Lean</label>
@@ -71,60 +88,104 @@ e.g. Find all real solutions of x^2 - 5x + 6 = 0."></textarea>
   </div>
 
   <div class="card" id="out" style="display:none">
+    <div class="stats" id="stats"></div>
     <div class="answer" id="answer"></div>
-    <div id="solution" style="margin-top:14px"></div>
-    <div class="files" id="files" style="margin-top:14px"></div>
-    <details id="trace" style="margin-top:12px"><summary>tool calls</summary><div id="traceBody"></div></details>
+    <h3>Solution</h3>
+    <div id="solution"></div>
+    <div class="files" id="files"></div>
+    <h3>Process <span class="muted" id="stepcount"></span></h3>
+    <div class="timeline" id="timeline"></div>
   </div>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
+let timerId = null;
 
 fetch('/api/health').then(r=>r.json()).then(h=>{
-  $('cfg').textContent = `provider: ${h.provider}  ·  model: ${h.model||'default'}  ·  python: ${h.python}  ·  lean: ${h.lean}`;
+  $('cfg').textContent = `model: ${h.model}  ·  provider: ${h.provider}  ·  python: ${h.python}  ·  lean: ${h.lean}`;
 }).catch(()=>{ $('cfg').textContent=''; });
+
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function chip(k,v){ return `<span class="chip"><span class="k">${k}</span><b>${v}</b></span>`; }
+
+function renderStats(data){
+  const u = data.usage || {};
+  const c = [];
+  c.push(chip('model', escapeHtml(data.model || '—')));
+  c.push(chip('tokens', `${u.prompt_tokens||0} → ${u.completion_tokens||0}  (Σ ${u.total_tokens||0})`));
+  if (u.cost_usd) c.push(chip('cost', `$${Number(u.cost_usd).toFixed(4)}`));
+  c.push(chip('time', `${data.elapsed_s}s`));
+  c.push(chip('LLM calls', u.llm_calls||0));
+  const tools = (data.steps||[]).filter(s=>s.type==='tool').length;
+  c.push(chip('tool runs', tools));
+  $('stats').innerHTML = c.join('');
+}
+
+function renderTimeline(steps){
+  const items = [];
+  for (const s of steps){
+    if (s.type === 'llm'){
+      const u = s.usage || {};
+      const tok = (u.prompt_tokens||u.completion_tokens)
+        ? `<span class="tok">${u.prompt_tokens||0}→${u.completion_tokens||0} tok</span>` : '';
+      const body = s.reasoning ? `<div class="body">${escapeHtml(s.reasoning)}</div>` : '';
+      items.push(`<div class="turn"><div class="head"><b>Step ${s.turn}</b> · model reasons ${tok}</div>${body}</div>`);
+    } else if (s.type === 'tool'){
+      items.push(`<div class="turn tool"><div class="head">🔧 <b>${escapeHtml(s.tool)}</b> tool</div>`
+        + `<div class="body"><pre>${escapeHtml(s.input)}</pre>`
+        + `<div class="muted" style="font-size:12px">→ result</div><pre>${escapeHtml(s.output)}</pre></div></div>`);
+    } else if (s.type === 'final'){
+      items.push(`<div class="turn final"><div class="head">✅ <b>final answer produced</b></div></div>`);
+    }
+  }
+  $('timeline').innerHTML = items.join('');
+  $('stepcount').textContent = `(${steps.length} steps)`;
+}
 
 async function solve(){
   const problem = $('problem').value.trim();
-  if(!problem){ return; }
-  const btn = $('go'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  if(!problem) return;
+  const btn = $('go'); btn.disabled = true;
   $('out').style.display='block';
-  $('answer').innerHTML=''; $('solution').innerHTML='<span class="muted">solving…</span>';
-  $('files').innerHTML=''; $('traceBody').innerHTML='';
+  $('answer').innerHTML=''; $('solution').innerHTML=''; $('files').innerHTML=''; $('timeline').innerHTML='';
+  $('stepcount').textContent='';
+
+  // live timer
+  const t0 = Date.now();
+  $('stats').innerHTML = chip('status','<span class="spinner"></span> solving') + chip('elapsed','0.0s');
+  timerId = setInterval(()=>{
+    $('stats').innerHTML = chip('status','<span class="spinner"></span> solving')
+      + chip('elapsed', ((Date.now()-t0)/1000).toFixed(1)+'s');
+  }, 100);
+
   try{
-    const body = {
-      problem,
-      format: $('format').value,
-      enable_python: $('python').checked,
-      enable_lean: $('lean').checked,
-    };
+    const body = { problem, format: $('format').value,
+                   enable_python: $('python').checked, enable_lean: $('lean').checked };
     const m = $('model').value.trim(); if(m) body.model = m;
     const r = await fetch('/api/solve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
     const data = await r.json();
+    clearInterval(timerId);
     if(!r.ok || data.error){
-      $('solution').innerHTML = `<span class="err">${data.error || ('HTTP '+r.status)}</span>`;
+      $('stats').innerHTML=''; $('solution').innerHTML = `<span class="err">${escapeHtml(data.error || ('HTTP '+r.status))}</span>`;
       return;
     }
+    renderStats(data);
     $('answer').innerHTML = data.answer
-      ? `<span class="tag">answer</span> &nbsp; $\\boxed{${data.answer}}$`
-      : `<span class="tag muted">no boxed answer extracted</span>`;
+      ? `<span class="tag">answer</span> $\\boxed{${data.answer}}$`
+      : `<span class="tag muted">no boxed answer</span>`;
     $('solution').textContent = data.solution || '';
     const files = data.files || {};
-    $('files').innerHTML = Object.keys(files).length
-      ? Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('')
-      : '';
-    const calls = data.tool_calls || [];
-    $('trace').style.display = calls.length ? 'block':'none';
-    $('traceBody').innerHTML = calls.map(c=>`<div class="muted" style="margin-top:8px">${c.tool}</div><pre>${escapeHtml(c.input)}\n→ ${escapeHtml(String(c.output))}</pre>`).join('');
-    if(window.MathJax && MathJax.typesetPromise){ await MathJax.typesetPromise([$('answer'),$('solution')]); }
+    $('files').innerHTML = Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('');
+    renderTimeline(data.steps || []);
+    if(window.MathJax && MathJax.typesetPromise){ await MathJax.typesetPromise([$('out')]); }
   }catch(e){
-    $('solution').innerHTML = `<span class="err">${e}</span>`;
+    clearInterval(timerId); $('stats').innerHTML='';
+    $('solution').innerHTML = `<span class="err">${escapeHtml(e)}</span>`;
   }finally{
-    btn.disabled=false; btn.textContent='Solve';
+    btn.disabled=false;
   }
 }
-function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 $('go').addEventListener('click', solve);
 $('problem').addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') solve(); });
 </script>

@@ -12,6 +12,8 @@ runner (M5). For personal/trusted use it is fine.
 
 from __future__ import annotations
 
+import os
+import time
 import uuid
 from pathlib import Path
 
@@ -72,13 +74,19 @@ def create_app(
     def index() -> HTMLResponse:
         return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
 
+    def _resolved_model() -> str:
+        cfg = app.state.cfg
+        if cfg["provider_kind"] == "mock":
+            return "mock"
+        return cfg["model"] or os.environ.get("MATHAGENT_MODEL", "(unset)")
+
     @app.get("/api/health")
     def health() -> dict:
         cfg = app.state.cfg
         return {
             "status": "ok",
             "provider": cfg["provider_kind"],
-            "model": cfg["model"],
+            "model": _resolved_model(),
             "python": cfg["enable_python"],
             "lean": cfg["enable_lean"],
         }
@@ -94,10 +102,12 @@ def create_app(
         tools = default_registry(python=py, lean=ln)
         agent = MathAgent(cfg["workspace"], prov, tools=tools, max_steps=req.max_steps)
 
+        t0 = time.time()
         try:
             traj = agent.solve(Task(id=uuid.uuid4().hex[:8], input=req.problem))
         except Exception as e:  # surface provider/credential errors to the UI
             return JSONResponse(status_code=502, content={"error": f"{type(e).__name__}: {e}"})
+        elapsed = round(time.time() - t0, 2)
 
         files: dict[str, str] = {}
         if req.format != "none":
@@ -107,13 +117,15 @@ def create_app(
                 if kind in ("tex", "pdf", "docx"):
                     files[kind] = f"/files/{Path(p).name}"
 
-        tool_calls = [s for s in traj.steps if s.get("type") == "tool"]
         return JSONResponse(
             {
                 "solution": traj.output,
                 "answer": extract_boxed(traj.output),
                 "files": files,
-                "tool_calls": tool_calls,
+                "model": req.model or _resolved_model(),
+                "elapsed_s": elapsed,
+                "usage": getattr(agent, "last_usage", {}),
+                "steps": traj.steps,
             }
         )
 

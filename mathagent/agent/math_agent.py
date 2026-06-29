@@ -37,6 +37,7 @@ class MathAgent(BaseAgent):
         self.tools = tools or ToolRegistry()
         self.max_steps = max_steps
         self.max_tokens = max_tokens
+        self.last_usage: dict = {}
         super().__init__(workspace_dir)  # populates system_prompt, skills, memories
 
     # ---- prompt assembly (reads evolvable workspace state) ----------------
@@ -94,39 +95,54 @@ class MathAgent(BaseAgent):
 
     # ---- the solve loop ---------------------------------------------------
 
+    def _track(self, usage: dict) -> None:
+        t = self.last_usage
+        for k in ("prompt_tokens", "completion_tokens", "total_tokens", "cost_usd"):
+            if usage.get(k):
+                t[k] = t.get(k, 0) + usage[k]
+        t["llm_calls"] = t.get("llm_calls", 0) + 1
+        if usage.get("model"):
+            t["model"] = usage["model"]
+
     def solve(self, task: Task) -> Trajectory:
         messages = [
             LLMMessage("system", self._system()),
             LLMMessage("user", self._user(task)),
         ]
         steps: list[dict] = []
+        self.last_usage = {}
 
-        for _ in range(self.max_steps):
+        def _traj(output: str) -> Trajectory:
+            return Trajectory(
+                task_id=task.id,
+                output=output,
+                steps=steps,
+                conversation=[{"role": m.role, "content": m.content} for m in messages],
+            )
+
+        for turn in range(self.max_steps):
             resp = self.provider.complete(messages, max_tokens=self.max_tokens)
             text = resp.content or ""
+            self._track(resp.usage or {})
             messages.append(LLMMessage("assistant", text))
+            # record the model's reasoning for this turn (tool blocks stripped for display)
+            reasoning = _TOOL_RE.sub("", _FINAL_RE.sub("", text)).strip()
+            steps.append(
+                {"type": "llm", "turn": turn + 1, "text": text,
+                 "reasoning": reasoning, "usage": resp.usage or {}}
+            )
 
             final = _FINAL_RE.search(text)
             if final:
                 solution = final.group(1).strip()
                 steps.append({"type": "final", "output": solution})
-                return Trajectory(
-                    task_id=task.id,
-                    output=solution,
-                    steps=steps,
-                    conversation=[{"role": m.role, "content": m.content} for m in messages],
-                )
+                return _traj(solution)
 
             calls = _TOOL_RE.findall(text)
             if not calls:
                 # No tool, no <final>: treat the whole message as the answer.
-                steps.append({"type": "final_implicit", "output": text})
-                return Trajectory(
-                    task_id=task.id,
-                    output=text.strip(),
-                    steps=steps,
-                    conversation=[{"role": m.role, "content": m.content} for m in messages],
-                )
+                steps.append({"type": "final", "output": text.strip()})
+                return _traj(text.strip())
 
             results = []
             for name, body in calls:
@@ -140,10 +156,4 @@ class MathAgent(BaseAgent):
                 )
             )
 
-        # ran out of steps
-        return Trajectory(
-            task_id=task.id,
-            output=messages[-1].content.strip(),
-            steps=steps,
-            conversation=[{"role": m.role, "content": m.content} for m in messages],
-        )
+        return _traj(messages[-1].content.strip())

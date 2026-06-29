@@ -56,10 +56,22 @@ class LiteLLMProvider(LLMProvider):
         content = choice.message.content or ""
         usage = {}
         if getattr(resp, "usage", None):
+            pt = getattr(resp.usage, "prompt_tokens", 0) or 0
+            ct = getattr(resp.usage, "completion_tokens", 0) or 0
             usage = {
-                "prompt_tokens": getattr(resp.usage, "prompt_tokens", 0),
-                "completion_tokens": getattr(resp.usage, "completion_tokens", 0),
+                "prompt_tokens": pt,
+                "completion_tokens": ct,
+                "total_tokens": getattr(resp.usage, "total_tokens", pt + ct) or (pt + ct),
             }
+        cost = (getattr(resp, "_hidden_params", {}) or {}).get("response_cost")
+        if not cost:
+            try:  # best-effort USD cost estimate
+                cost = litellm.completion_cost(completion_response=resp)
+            except Exception:
+                cost = None
+        if cost:
+            usage["cost_usd"] = float(cost)
+        usage["model"] = self.model
         return LLMResponse(content=content, usage=usage, raw=resp)
 
     def complete_with_tools(

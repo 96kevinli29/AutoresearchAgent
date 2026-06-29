@@ -57,8 +57,11 @@ mathagent evolve data/seed_problems.jsonl --rule --cycles 4     # deterministic 
 # 5. web UI / API (same core as the CLI) — "online use"
 mathagent serve --port 8000                  # real provider (set .env)
 mathagent serve --provider mock --port 8000  # no-key demo
-#   GET /              chat UI (MathJax)
+#   GET /              chat UI (MathJax) — shows model, token usage + cost,
+#                      elapsed time, and the full step-by-step process timeline
+#                      (each model turn + every tool call's code and output)
 #   POST /api/solve    {problem, format, model?, enable_python?, enable_lean?}
+#                      -> {solution, answer, files, model, elapsed_s, usage, steps}
 #   GET /files/<name>  generated .tex/.pdf/.docx
 
 # 6. (optional) enable Lean formal verification
