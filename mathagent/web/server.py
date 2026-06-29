@@ -12,8 +12,10 @@ runner (M5). For personal/trusted use it is fine.
 
 from __future__ import annotations
 
+import json
 import os
 import time
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -31,15 +33,75 @@ from ..tools import default_registry, export
 
 _STATIC = Path(__file__).resolve().parent / "static"
 
-# Curated OpenRouter models that do well on math/proof tasks (price = in/out per 1M tok).
+# Static fallback (used only if the live OpenRouter fetch fails). Kept reasonably current.
 _CURATED_MODELS = [
-    {"id": "openrouter/anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6 — strong, balanced", "price": "$3 / $15"},
-    {"id": "openrouter/anthropic/claude-opus-4.8", "label": "Claude Opus 4.8 — strongest", "price": "$5 / $25"},
-    {"id": "openrouter/openai/gpt-5.2", "label": "GPT-5.2 — strong general + math", "price": "$1.75 / $14"},
-    {"id": "openrouter/deepseek/deepseek-r1-0528", "label": "DeepSeek R1 — math reasoning, cheap", "price": "$0.50 / $2.15"},
-    {"id": "openrouter/qwen/qwen3-235b-a22b-thinking-2507", "label": "Qwen3 235B Thinking — math, very cheap", "price": "$0.10 / $0.10"},
-    {"id": "openrouter/google/gemini-2.5-pro", "label": "Gemini 2.5 Pro", "price": "$1.25 / $10"},
+    {"id": "openrouter/anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6", "price": "$3 / $15"},
+    {"id": "openrouter/anthropic/claude-opus-4.8", "label": "Claude Opus 4.8", "price": "$5 / $25"},
+    {"id": "openrouter/openai/gpt-5.5", "label": "GPT-5.5", "price": "$5 / $30"},
+    {"id": "openrouter/deepseek/deepseek-v4-pro", "label": "DeepSeek V4 Pro", "price": "$0.43 / $1"},
+    {"id": "openrouter/qwen/qwen3.7-max", "label": "Qwen3.7 Max", "price": "$1.25 / $4"},
+    {"id": "openrouter/google/gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro", "price": "$2 / $12"},
+    {"id": "openrouter/x-ai/grok-4.3", "label": "Grok 4.3", "price": "$1.25 / $2"},
 ]
+
+# For each family: prefix, substrings to exclude (variants), optional special filter.
+_FAMILIES = [
+    ("Claude Opus", "anthropic/claude-opus", ("fast",), None),
+    ("Claude Sonnet", "anthropic/claude-sonnet", ("thinking",), None),
+    ("GPT", "openai/gpt-5", ("mini", "nano", "codex", "image", "search", "audio", "-chat", "-pro"), None),
+    ("DeepSeek", "deepseek/deepseek", ("distill", "flash"), None),
+    ("Qwen", "qwen/qwen", ("coder", "-vl", "omni", "image", "audio"), "qwen"),
+    ("Gemini Pro", "google/gemini", ("image", "customtools", "flash", "-lite"), "gemini"),
+    ("Grok", "x-ai/grok", ("mini", "fast", "code", "build", "multi-agent", "image"), None),
+]
+_models_cache: dict = {"ts": 0.0, "data": None}
+
+
+def _price(m: dict) -> str:
+    p = m.get("pricing") or {}
+    try:
+        return f"${float(p.get('prompt', 0)) * 1e6:.2f} / ${float(p.get('completion', 0)) * 1e6:.0f}"
+    except Exception:
+        return ""
+
+
+def _curate(allm: list) -> list:
+    out = []
+    for label, pref, excl, special in _FAMILIES:
+        c = [m for m in allm if m["id"].startswith(pref)
+             and not any(x in m["id"] for x in excl) and ":free" not in m["id"]]
+        if special == "qwen":
+            c = [m for m in c if "max" in m["id"] or "thinking" in m["id"]] or c
+        if special == "gemini":
+            c = [m for m in c if "pro" in m["id"]] or c
+        if not c:
+            continue
+        m = max(c, key=lambda x: x.get("created", 0))
+        out.append({"id": "openrouter/" + m["id"],
+                    "label": f"{label} — {m['id'].split('/')[-1]}", "price": _price(m)})
+    return out
+
+
+def _live_models() -> list | None:
+    """Newest flagship per family, fetched live from OpenRouter (cached 10 min)."""
+    now = time.time()
+    if _models_cache["data"] and now - _models_cache["ts"] < 600:
+        return _models_cache["data"]
+    key = os.environ.get("OPENROUTER_API_KEY")
+    try:
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/models",
+            headers={"Authorization": f"Bearer {key}"} if key else {},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            allm = json.load(r)["data"]
+        data = _curate(allm)
+        if data:
+            _models_cache.update(ts=now, data=data)
+            return data
+    except Exception:
+        pass
+    return None
 
 
 class SolveRequest(BaseModel):
@@ -100,7 +162,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "studio-v4-light",
+                "ui": "studio-v5-livemodels",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],
@@ -111,8 +173,10 @@ def create_app(
 
     @app.get("/api/models")
     def models() -> JSONResponse:
+        live = _live_models() if app.state.cfg["provider_kind"] != "mock" else None
         return JSONResponse(
-            {"default": _resolved_model(), "models": _CURATED_MODELS}, headers=_NOCACHE
+            {"default": _resolved_model(), "models": live or _CURATED_MODELS, "live": bool(live)},
+            headers=_NOCACHE,
         )
 
     @app.post("/api/solve")
