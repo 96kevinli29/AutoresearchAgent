@@ -33,15 +33,12 @@ from ..tools import default_registry, export
 
 _STATIC = Path(__file__).resolve().parent / "static"
 
-# Static fallback (used only if the live OpenRouter fetch fails). Kept reasonably current.
+# A few popular families only. Static fallback (used if the live OpenRouter fetch fails).
 _CURATED_MODELS = [
-    {"id": "openrouter/anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6", "price": "$3 / $15"},
     {"id": "openrouter/anthropic/claude-opus-4.8", "label": "Claude Opus 4.8", "price": "$5 / $25"},
+    {"id": "openrouter/anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6", "price": "$3 / $15"},
     {"id": "openrouter/openai/gpt-5.5", "label": "GPT-5.5", "price": "$5 / $30"},
     {"id": "openrouter/deepseek/deepseek-v4-pro", "label": "DeepSeek V4 Pro", "price": "$0.43 / $1"},
-    {"id": "openrouter/qwen/qwen3.7-max", "label": "Qwen3.7 Max", "price": "$1.25 / $4"},
-    {"id": "openrouter/google/gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro", "price": "$2 / $12"},
-    {"id": "openrouter/x-ai/grok-4.3", "label": "Grok 4.3", "price": "$1.25 / $2"},
 ]
 
 # For each family: prefix, substrings to exclude (variants), optional special filter.
@@ -50,9 +47,6 @@ _FAMILIES = [
     ("Claude Sonnet", "anthropic/claude-sonnet", ("thinking",), None),
     ("GPT", "openai/gpt-5", ("mini", "nano", "codex", "image", "search", "audio", "-chat", "-pro"), None),
     ("DeepSeek", "deepseek/deepseek", ("distill", "flash"), None),
-    ("Qwen", "qwen/qwen", ("coder", "-vl", "omni", "image", "audio"), "qwen"),
-    ("Gemini Pro", "google/gemini", ("image", "customtools", "flash", "-lite"), "gemini"),
-    ("Grok", "x-ai/grok", ("mini", "fast", "code", "build", "multi-agent", "image"), None),
 ]
 _models_cache: dict = {"ts": 0.0, "data": None}
 
