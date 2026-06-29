@@ -70,9 +70,13 @@ def create_app(
 
     app.mount("/files", StaticFiles(directory=out_dir), name="files")
 
+    _NOCACHE = {"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"}
+
     @app.get("/", response_class=HTMLResponse)
     def index() -> HTMLResponse:
-        return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
+        return HTMLResponse(
+            (_STATIC / "index.html").read_text(encoding="utf-8"), headers=_NOCACHE
+        )
 
     def _resolved_model() -> str:
         cfg = app.state.cfg
@@ -81,15 +85,19 @@ def create_app(
         return cfg["model"] or os.environ.get("MATHAGENT_MODEL", "(unset)")
 
     @app.get("/api/health")
-    def health() -> dict:
+    def health() -> JSONResponse:
         cfg = app.state.cfg
-        return {
-            "status": "ok",
-            "provider": cfg["provider_kind"],
-            "model": _resolved_model(),
-            "python": cfg["enable_python"],
-            "lean": cfg["enable_lean"],
-        }
+        return JSONResponse(
+            {
+                "status": "ok",
+                "ui": "transparent-v2",
+                "provider": cfg["provider_kind"],
+                "model": _resolved_model(),
+                "python": cfg["enable_python"],
+                "lean": cfg["enable_lean"],
+            },
+            headers=_NOCACHE,
+        )
 
     @app.post("/api/solve")
     def api_solve(req: SolveRequest) -> JSONResponse:
