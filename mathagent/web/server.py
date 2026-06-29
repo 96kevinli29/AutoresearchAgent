@@ -100,7 +100,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "transparent-v2",
+                "ui": "studio-v3",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],
