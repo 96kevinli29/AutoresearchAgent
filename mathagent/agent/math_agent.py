@@ -22,6 +22,24 @@ from ..tools.registry import ToolRegistry
 
 _TOOL_RE = re.compile(r"<tool:(\w+)>\s*(.*?)\s*</tool>", re.DOTALL)
 _FINAL_RE = re.compile(r"<final>\s*(.*?)\s*</final>", re.DOTALL)
+_FINAL_OPEN_RE = re.compile(r"<final>\s*(.*)$", re.DOTALL | re.IGNORECASE)
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+_FENCE_RE = re.compile(r"```(?:latex|tex|markdown)?")
+
+
+def _extract_solution(text: str) -> str:
+    """Robustly pull the final solution out of a model reply, even when the
+    model (esp. reasoning models) forgets to close <final>, wraps in code
+    fences, or leaves <think> chatter in the content."""
+    m = _FINAL_RE.search(text)
+    if m:
+        t = m.group(1)
+    else:
+        m = _FINAL_OPEN_RE.search(text)  # opened <final> but never closed (long answer)
+        t = m.group(1) if m else text
+    t = _THINK_RE.sub("", t)
+    t = _FENCE_RE.sub("", t).replace("```", "")
+    return t.strip()
 
 
 class MathAgent(BaseAgent):
@@ -31,7 +49,7 @@ class MathAgent(BaseAgent):
         provider: LLMProvider,
         tools: ToolRegistry | None = None,
         max_steps: int = 8,
-        max_tokens: int = 4096,
+        max_tokens: int | None = None,  # None => uncapped output (hard problems)
     ) -> None:
         self.provider = provider
         self.tools = tools or ToolRegistry()
@@ -77,9 +95,15 @@ class MathAgent(BaseAgent):
                 + "\nNever assert a computed result you have not checked with a tool when one is available."
             )
         finish = (
-            "\n\n## Finishing\nWhen the solution is complete and verified, output the "
-            "full self-contained solution in LaTeX inside <final>...</final>, "
-            "ending with `Answer: $\\boxed{...}$` when the problem has a closed-form answer."
+            "\n\n## Finishing — REQUIRED format\n"
+            "Your message that contains the solution MUST put the complete, self-contained "
+            "solution as valid LaTeX between the literal tags `<final>` and `</final>`, and "
+            "MUST include the closing `</final>`.\n"
+            "- Do not put scratch work or chain-of-thought outside the tags; only the clean solution goes inside.\n"
+            "- Use LaTeX only (no Markdown, no ``` code fences).\n"
+            "- It must compile on its own (define what you use; balanced braces and environments).\n"
+            "- End with `Answer: $\\boxed{...}$` when the problem has a closed-form answer.\n"
+            "Take as much space as the problem needs — there is no length limit."
         )
         return (self.system_prompt or "You are a rigorous mathematician.") + tool_help + finish
 
@@ -146,17 +170,13 @@ class MathAgent(BaseAgent):
             _emit({"ev": "step", "type": "llm", "turn": turn + 1,
                    "reasoning": reasoning, "usage": resp.usage or {}})
 
-            final = _FINAL_RE.search(text)
-            if final:
-                solution = final.group(1).strip()
+            # Done when there's a closed <final>, or no tool call to run (in which
+            # case _extract_solution handles an unclosed <final> / stray chatter).
+            calls = _TOOL_RE.findall(text)
+            if _FINAL_RE.search(text) or not calls:
+                solution = _extract_solution(text)
                 steps.append({"type": "final", "output": solution})
                 return _traj(solution)
-
-            calls = _TOOL_RE.findall(text)
-            if not calls:
-                # No tool, no <final>: treat the whole message as the answer.
-                steps.append({"type": "final", "output": text.strip()})
-                return _traj(text.strip())
 
             results = []
             for name, body in calls:
@@ -172,4 +192,4 @@ class MathAgent(BaseAgent):
                 )
             )
 
-        return _traj(messages[-1].content.strip())
+        return _traj(_extract_solution(messages[-1].content))

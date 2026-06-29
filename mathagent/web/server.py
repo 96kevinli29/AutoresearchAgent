@@ -157,7 +157,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "studio-v7-stream",
+                "ui": "studio-v8-uncapped",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],

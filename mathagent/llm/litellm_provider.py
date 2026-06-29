@@ -23,13 +23,14 @@ class LiteLLMProvider(LLMProvider):
         self,
         model: str | None = None,
         temperature: float = 0.0,
-        max_tokens: int = 4096,
+        max_tokens: int | None = None,
         **client_kwargs: Any,
     ) -> None:
         self.model = model or os.environ.get(
             "MATHAGENT_MODEL", "anthropic/claude-opus-4-6"
         )
         self.temperature = temperature
+        # None => do not cap output (hard problems can need very long answers)
         self.max_tokens = max_tokens
         self.client_kwargs = client_kwargs
 
@@ -45,15 +46,23 @@ class LiteLLMProvider(LLMProvider):
     ) -> LLMResponse:
         import litellm
 
+        cap = max_tokens or self.max_tokens  # None => uncapped (model's max)
+        extra = {"max_tokens": cap} if cap else {}
         resp = litellm.completion(
             model=self.model,
             messages=self._to_dicts(messages),
-            max_tokens=max_tokens or self.max_tokens,
             temperature=self.temperature if temperature is None else temperature,
+            **extra,
             **{**self.client_kwargs, **kwargs},
         )
         choice = resp.choices[0]
         content = choice.message.content or ""
+        if not content.strip():  # reasoning models may put text in a reasoning field
+            content = (
+                getattr(choice.message, "reasoning_content", None)
+                or getattr(choice.message, "reasoning", None)
+                or ""
+            )
         usage = {}
         if getattr(resp, "usage", None):
             pt = getattr(resp.usage, "prompt_tokens", 0) or 0
@@ -83,11 +92,13 @@ class LiteLLMProvider(LLMProvider):
     ) -> LLMResponse:
         import litellm
 
+        cap = max_tokens or self.max_tokens
+        extra = {"max_tokens": cap} if cap else {}
         resp = litellm.completion(
             model=self.model,
             messages=self._to_dicts(messages),
             tools=tools,
-            max_tokens=max_tokens or self.max_tokens,
+            **extra,
             **{**self.client_kwargs, **kwargs},
         )
         choice = resp.choices[0]
