@@ -148,6 +148,13 @@ class MathAgent(BaseAgent):
                 except Exception:
                     pass
 
+        def _emit_token(piece: str) -> None:
+            if on_event:
+                try:
+                    on_event({"ev": "token", "text": piece})
+                except Exception:
+                    pass
+
         def _traj(output: str) -> Trajectory:
             return Trajectory(
                 task_id=task.id,
@@ -157,7 +164,10 @@ class MathAgent(BaseAgent):
             )
 
         for turn in range(self.max_steps):
-            resp = self.provider.complete(messages, max_tokens=self.max_tokens)
+            tok_cb = _emit_token if on_event else None
+            resp = self.provider.complete(
+                messages, max_tokens=self.max_tokens, on_token=tok_cb
+            )
             text = resp.content or ""
             self._track(resp.usage or {})
             messages.append(LLMMessage("assistant", text))

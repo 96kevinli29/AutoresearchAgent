@@ -4,124 +4,115 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>mathagent</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/katex/katex.min.css">
 <script defer src="/static/katex/katex.min.js"></script>
 <script defer src="/static/katex/contrib/auto-render.min.js"></script>
 <style>
   :root{
-    --bg:#ffffff; --surface:#ffffff; --surface2:#f8f9fa; --surface3:#f1f3f4;
-    --line:#dadce0; --line2:#c4c7cc; --fg:#202124; --muted:#5f6368; --faint:#80868b;
-    --accent:#1a73e8; --accent-h:#1765cc; --green:#188038; --red:#d93025; --amber:#e37400;
-    --g-blue:#4285F4; --g-red:#EA4335; --g-yellow:#FBBC05; --g-green:#34A853;
-    --radius:10px; --shadow:0 1px 2px rgba(60,64,67,.12),0 1px 3px 1px rgba(60,64,67,.08);
-    --shadow-h:0 1px 3px rgba(60,64,67,.2),0 4px 8px 3px rgba(60,64,67,.1);
+    --bg:#f7f6f1; --surface:#ffffff; --surface2:#f2f0e9; --surface3:#edeae1;
+    --line:#e7e4db; --line2:#d9d5c9; --fg:#201f1c; --muted:#73706a; --faint:#a39e93;
+    --accent:#c96442; --accent-h:#b1543a; --accent-soft:#f4e9e3; --green:#4f7a4a;
+    --radius:12px; --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(40,38,33,.05),0 2px 8px rgba(40,38,33,.04);
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{background:var(--surface2); color:var(--fg);
-       font:14.5px/1.6 'Roboto',-apple-system,Segoe UI,sans-serif}
-  a{color:var(--accent);text-decoration:none}
-  a:hover{text-decoration:underline}
+  body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--sans)}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  .topbar{display:flex;align-items:center;gap:12px;padding:12px 22px;background:var(--surface);
+  .topbar{display:flex;align-items:center;gap:12px;padding:13px 24px;background:var(--bg);
           border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-  .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:500;color:var(--fg)}
-  .logo .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:#fff;
+  .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;letter-spacing:.2px}
+  .logo .mark{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;
               display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
   .tagline{color:var(--muted);font-size:13px}
   .topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
-  .badge{background:#e8f0fe;color:var(--accent);border:1px solid #d2e3fc;border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:500}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--g-green)}
-  .app{display:grid;grid-template-columns:340px 1fr;gap:18px;max-width:1200px;margin:18px auto;padding:0 18px}
+  .badge{background:var(--accent-soft);color:var(--accent);border:1px solid #ecd9cf;border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .app{display:grid;grid-template-columns:300px 1fr;gap:26px;max-width:1180px;margin:24px auto;padding:0 24px}
   @media(max-width:900px){ .app{grid-template-columns:1fr} }
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
-  .sidebar{display:flex;flex-direction:column;gap:14px;align-self:start}
-  h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin:0 0 10px;font-weight:500}
-  textarea{width:100%;min-height:92px;resize:vertical;background:var(--surface);color:var(--fg);
-           border:1px solid var(--line2);border-radius:var(--radius);padding:11px;font:inherit;font-size:14.5px}
-  textarea:focus,select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,115,232,.15)}
-  .fld{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);margin-top:11px}
-  .fld.row{flex-direction:row;align-items:center;gap:16px}
+  .sidebar{display:flex;flex-direction:column;gap:16px;align-self:start}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  h3{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--faint);margin:0 0 10px;font-weight:600}
+  textarea{width:100%;min-height:88px;resize:vertical;background:var(--surface);color:var(--fg);
+           border:1px solid var(--line2);border-radius:10px;padding:11px;font:inherit;font-size:15px}
+  textarea:focus,select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,100,66,.12)}
+  .fld{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted);margin-top:12px;text-transform:uppercase;letter-spacing:.5px}
   select,input[type=text]{background:var(--surface);color:var(--fg);border:1px solid var(--line2);
-           border-radius:8px;padding:9px 10px;font:inherit;font-size:13.5px;width:100%}
+           border-radius:9px;padding:9px 10px;font:inherit;font-size:13.5px;width:100%;text-transform:none;letter-spacing:0}
   .half{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .toggles{display:flex;gap:18px;align-items:center;font-size:13.5px;color:var(--fg);margin-top:12px}
+  .toggles{display:flex;gap:16px;align-items:center;font-size:13.5px;color:var(--fg);margin-top:4px;text-transform:none;letter-spacing:0}
   .toggles label{display:flex;gap:7px;align-items:center;cursor:pointer}
-  accent-bar{display:block;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--g-blue),var(--g-red) 33%,var(--g-yellow) 66%,var(--g-green))}
-  button.primary{width:100%;margin-top:13px;background:var(--accent);color:#fff;border:0;border-radius:24px;
-           padding:11px;font:inherit;font-weight:500;font-size:14.5px;cursor:pointer;box-shadow:var(--shadow)}
-  button.primary:hover{background:var(--accent-h);box-shadow:var(--shadow-h)}
-  button.primary:disabled{opacity:.6;cursor:default;box-shadow:none}
+  button.primary{width:100%;margin-top:14px;background:var(--accent);color:#fff;border:0;border-radius:10px;
+           padding:11px;font:inherit;font-weight:600;font-size:15px;cursor:pointer}
+  button.primary:hover{background:var(--accent-h)} button.primary:disabled{opacity:.55;cursor:default}
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .ex{background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12.5px;
-      color:var(--accent);cursor:pointer;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ex:hover{background:#e8f0fe;border-color:#d2e3fc}
+      color:var(--fg);cursor:pointer;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ex:hover{border-color:var(--accent);color:var(--accent)}
   .hist{display:flex;flex-direction:column;gap:7px;max-height:280px;overflow:auto}
-  .hist .it{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer}
-  .hist .it:hover{background:var(--surface2);box-shadow:var(--shadow)}
-  .hist .q{font-size:12.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hist .it{border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;background:var(--surface)}
+  .hist .it:hover{background:var(--surface2)}
+  .hist .q{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hist .a{font-size:11.5px;color:var(--muted);margin-top:2px}
   .hist .empty{color:var(--faint);font-size:12.5px}
-  .empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:44px 18px;color:var(--muted)}
-  .empty-state .big{width:56px;height:56px;border-radius:16px;background:#e8f0fe;color:var(--accent);
-               display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:26px;font-weight:700}
-  .empty-state h2{margin:0 0 6px;color:var(--fg);font-size:19px;font-weight:500}
-  .ex-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;width:100%;max-width:580px}
-  @media(max-width:520px){ .ex-cards{grid-template-columns:1fr} }
-  .ex-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:left;
-           cursor:pointer;font-size:13.5px;color:var(--fg)}
-  .ex-card:hover{box-shadow:var(--shadow-h);border-color:var(--line2)}
-  .ex-card .k{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;font-weight:500}
-  .answer-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#e8f0fe;
-           border:1px solid #d2e3fc;border-radius:12px;padding:14px 16px;margin-bottom:14px}
-  .answer-banner .lab{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;font-weight:500}
-  .answer-banner .val{font-size:20px;color:var(--fg)}
-  .verified{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#e6f4ea;
-           color:var(--green);border:1px solid #ceead6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:500}
-  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
-  .metric{background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
-  .metric .k{font-size:11px;color:var(--faint)}
-  .metric .v{font-size:18px;font-weight:500;margin-top:3px;color:var(--fg)}
-  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:13px}
-  .tab{padding:9px 14px;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+  .main{min-width:0}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px 30px;box-shadow:var(--shadow);max-width:840px}
+  .empty-state{text-align:center;padding:40px 10px;color:var(--muted)}
+  .empty-state .big{width:58px;height:58px;border-radius:16px;background:var(--accent-soft);color:var(--accent);
+       display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:27px;font-weight:700;font-family:var(--serif)}
+  .empty-state h2{margin:0 0 6px;color:var(--fg);font-size:22px;font-weight:600;font-family:var(--serif)}
+  .ex-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px;text-align:left}
+  @media(max-width:560px){ .ex-cards{grid-template-columns:1fr} }
+  .ex-card{border:1px solid var(--line);border-radius:12px;padding:13px 15px;cursor:pointer;font-size:14px}
+  .ex-card:hover{border-color:var(--accent);background:var(--surface2)}
+  .ex-card .k{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;font-weight:600}
+  .stream-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;color:var(--muted);font-size:13px}
+  .pulse{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+  .meter{margin-left:auto;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .meter b{color:var(--fg);font-weight:600}
+  .stream-text{font-family:var(--serif);font-size:16px;line-height:1.75;color:#3a3833;white-space:pre-wrap;
+       max-height:46vh;overflow:auto;padding:2px 0}
+  .answer-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--accent-soft);
+       border:1px solid #ecd9cf;border-radius:12px;padding:15px 18px;margin-bottom:18px}
+  .answer-banner .lab{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;font-weight:600}
+  .answer-banner .val{font-size:21px;margin-top:2px;font-family:var(--serif)}
+  .verified{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#eaf1e7;color:var(--green);
+       border:1px solid #d4e3ce;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
+  .metrics{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .metric .k{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
+  .metric .v{font-size:17px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  .tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .tab{padding:0 0 10px;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
   .hidden{display:none}
-  pre{background:var(--surface3);border:1px solid var(--line);border-radius:9px;padding:11px;overflow:auto;
-      font-size:12.5px;color:#3c4043;white-space:pre-wrap;font-family:ui-monospace,'Roboto Mono',Menlo,monospace}
-  .sol{font-size:15px;line-height:1.75;color:var(--fg)}
-  .row-actions{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
-  .btn-ghost{background:var(--surface);border:1px solid var(--line2);color:var(--accent);border-radius:8px;
-             padding:7px 13px;font:inherit;font-size:12.5px;cursor:pointer}
+  .sol{font-family:var(--serif);font-size:16.5px;line-height:1.8;color:#2a2824}
+  .sol h4{font-family:var(--sans);font-size:14px;color:var(--fg);margin:18px 0 6px;font-weight:600}
+  .sol ol,.sol ul{padding-left:22px}
+  pre{background:var(--surface3);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;
+      font-size:12.5px;color:#403c34;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .row-actions{display:flex;gap:14px;align-items:center;margin-top:16px;flex-wrap:wrap}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line2);color:var(--accent);border-radius:9px;padding:7px 13px;font:inherit;font-size:13px;cursor:pointer}
   .btn-ghost:hover{background:var(--surface2)}
-  .timeline{border-left:2px solid var(--line);margin-left:6px;padding-left:16px}
-  .turn{position:relative;margin:0 0 16px}
-  .turn::before{content:'';position:absolute;left:-23px;top:4px;width:10px;height:10px;border-radius:50%;
-                background:var(--surface);border:2px solid var(--accent)}
-  .turn.tool::before{border-color:var(--g-green)}
-  .turn.final::before{background:var(--g-green);border-color:var(--g-green)}
+  .timeline{border-left:2px solid var(--line);margin-left:5px;padding-left:18px;margin-top:6px}
+  .turn{position:relative;margin:0 0 18px}
+  .turn::before{content:'';position:absolute;left:-25px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+  .turn.tool::before{border-color:var(--green)} .turn.final::before{background:var(--green);border-color:var(--green)}
   .turn .head{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
-  .turn .head b{color:var(--fg);font-weight:500}
+  .turn .head b{color:var(--fg);font-weight:600}
   .tok{font-size:11px;color:var(--faint)}
-  .err{color:var(--red)}
-  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;
-           border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
-  @keyframes spin{to{transform:rotate(360deg)}}
+  .err{color:#b3402e;font-family:var(--sans)}
 </style>
 </head>
 <body>
-<h2 class="sr-only">mathagent — enter a math problem, select a model and verification tools, and get a step-by-step solution with the model, token usage, cost, and process timeline.</h2>
+<h2 class="sr-only">mathagent — enter a math problem, choose a model and verification tools, and watch the solution stream in with live token usage and cost.</h2>
 
 <div class="topbar">
   <div class="logo"><span class="mark">∑</span> mathagent</div>
   <span class="tagline">math solving &amp; proofs</span>
-  <div class="right">
-    <span class="badge">studio · v8</span>
-    <span class="dot" title="online"></span>
-    <span id="cfg">…</span>
-  </div>
+  <div class="right"><span class="badge">studio · v9</span><span class="dot"></span><span id="cfg">…</span></div>
 </div>
 
 <div class="app">
@@ -131,21 +122,15 @@
       <textarea id="problem" placeholder="Enter a math problem or a statement to prove…&#10;e.g. Find all real solutions of x^2 - 5x + 6 = 0."></textarea>
       <div class="half">
         <label class="fld">format
-          <select id="format">
-            <option value="pdf">pdf</option><option value="latex">latex</option>
-            <option value="docx">docx</option><option value="none">none</option>
-          </select>
+          <select id="format"><option value="pdf">pdf</option><option value="latex">latex</option><option value="docx">docx</option><option value="none">none</option></select>
         </label>
         <div class="fld">verify
-          <div class="toggles" style="margin-top:0">
-            <label><input type="checkbox" id="python" checked /> Python</label>
-            <label><input type="checkbox" id="lean" /> Lean</label>
-          </div>
+          <div class="toggles"><label><input type="checkbox" id="python" checked /> Python</label><label><input type="checkbox" id="lean" /> Lean</label></div>
         </div>
       </div>
-      <label class="fld">model <span style="color:var(--faint)">— pick one</span>
+      <label class="fld">model
         <select id="model">
-          <option value="">server default — claude-sonnet-4.6</option>
+          <option value="">server default</option>
           <option value="openrouter/anthropic/claude-opus-4.8">Claude Opus 4.8 · $5 / $25</option>
           <option value="openrouter/anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 · $3 / $15</option>
           <option value="openrouter/openai/gpt-5.5">GPT-5.5 · $5 / $30</option>
@@ -156,24 +141,16 @@
       <input type="text" id="modelCustom" class="hidden" style="margin-top:8px" placeholder="custom model id, e.g. openrouter/…" />
       <button class="primary" id="go">Solve</button>
     </div>
-
-    <div class="card">
-      <h3>Examples</h3>
-      <div class="chips" id="examples"></div>
-    </div>
-
-    <div class="card">
-      <h3>History</h3>
-      <div class="hist" id="history"><div class="empty">solved problems appear here</div></div>
-    </div>
+    <div class="card"><h3>Examples</h3><div class="chips" id="examples"></div></div>
+    <div class="card"><h3>History</h3><div class="hist" id="history"><div class="empty">solved problems appear here</div></div></div>
   </div>
 
   <div class="main">
-    <div class="card" id="result">
+    <div class="panel" id="result">
       <div class="empty-state" id="emptyState">
         <div class="big">∑</div>
         <h2>Solve a math problem</h2>
-        <div>Type a problem on the left, or start from an example:</div>
+        <div>Type a problem on the left, or start from an example.</div>
         <div class="ex-cards" id="exCards"></div>
       </div>
       <div id="resultBody" class="hidden"></div>
@@ -182,187 +159,118 @@
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-const state = { history: [] };
-const EXAMPLES = [
+const $=id=>document.getElementById(id);
+const state={history:[]};
+const EXAMPLES=[
   ["Algebra","Find all real solutions of x^2 - 5x + 6 = 0."],
   ["Calculus","Evaluate the integral of x^2 from 0 to 1."],
-  ["Number theory","Prove that the sum of the first n positive odd integers equals n^2."],
+  ["Number theory","Prove that 1^3+2^3+...+n^3 = (n(n+1)/2)^2 for all positive integers n."],
   ["Combinatorics","How many subsets does a set with 5 elements have?"],
   ["Limits","Evaluate the limit of (1 + 1/n)^n as n approaches infinity."],
   ["Inequality","Prove that for positive reals a, b: a/b + b/a >= 2."],
 ];
-function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-
-function typeset(el){
-  if(window.renderMathInElement) renderMathInElement(el,{
-    delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},
-                {left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
-    throwOnError:false
-  });
-}
-// Convert a LaTeX document body (the model output) into readable HTML + math.
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function typeset(el){if(window.renderMathInElement)renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}
 function latexToHtml(src){
-  src=String(src||'');
-  const math=[];
-  src=src.replace(/\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^$]*\$|\\\([\s\S]*?\\\)/g, m=>{math.push(m);return '@@M'+(math.length-1)+'@@';});
+  src=String(src||'');const math=[];
+  src=src.replace(/\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\$[^$]*\$|\\\([\s\S]*?\\\)/g,m=>{math.push(m);return '@@M'+(math.length-1)+'@@';});
   src=src.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  src=src
-    .replace(/\\textbf\{([^{}]*)\}/g,'<b>$1</b>')
-    .replace(/\\(textit|emph)\{([^{}]*)\}/g,'<i>$2</i>')
-    .replace(/\\(sub)?section\*?\{([^{}]*)\}/g,'<h4 style="margin:14px 0 4px">$2</h4>')
+  src=src.replace(/\\textbf\{([^{}]*)\}/g,'<b>$1</b>').replace(/\\(textit|emph)\{([^{}]*)\}/g,'<i>$2</i>')
+    .replace(/\\(sub)?section\*?\{([^{}]*)\}/g,'<h4>$2</h4>')
     .replace(/\\begin\{enumerate\}/g,'<ol>').replace(/\\end\{enumerate\}/g,'</ol>')
     .replace(/\\begin\{itemize\}/g,'<ul>').replace(/\\end\{itemize\}/g,'</ul>')
     .replace(/\\begin\{[^}]*\}/g,'').replace(/\\end\{[^}]*\}/g,'')
-    .replace(/\\item\s*/g,'<li>')
-    .replace(/\\checkmark/g,'✓').replace(/\\quad/g,'&nbsp;&nbsp;').replace(/\\[,;:]/g,' ')
-    .replace(/\\\\/g,'<br>')
-    .replace(/\n[ \t]*\n/g,'<br><br>');
-  src=src.replace(/@@M(\d+)@@/g,(m,i)=>math[+i]);
-  return src;
+    .replace(/\\item\s*/g,'<li>').replace(/\\checkmark/g,'✓').replace(/\\quad/g,'&nbsp;&nbsp;').replace(/\\[,;:]/g,' ')
+    .replace(/\\\\/g,'<br>').replace(/\n[ \t]*\n/g,'<br><br>');
+  src=src.replace(/@@M(\d+)@@/g,(m,i)=>math[+i]);return src;
 }
-
-fetch('/api/health').then(r=>r.json()).then(h=>{
-  $('cfg').textContent = `${h.model} · python ${h.python?'on':'off'} · lean ${h.lean?'on':'off'}`;
-}).catch(()=>{ $('cfg').textContent=''; });
-
+fetch('/api/health').then(r=>r.json()).then(h=>{$('cfg').textContent=`${h.model} · python ${h.python?'on':'off'} · lean ${h.lean?'on':'off'}`;}).catch(()=>{});
 fetch('/api/models').then(r=>r.json()).then(d=>{
-  $('model').innerHTML = `<option value="">server default — ${d.default}</option>`
-    + (d.models||[]).map(m=>`<option value="${m.id}">${m.label} · ${m.price}</option>`).join('')
-    + `<option value="__custom__">Custom…</option>`;
+  $('model').innerHTML=`<option value="">server default — ${d.default}</option>`
+   +(d.models||[]).map(m=>`<option value="${m.id}">${m.label} · ${m.price}</option>`).join('')
+   +`<option value="__custom__">Custom…</option>`;
 }).catch(()=>{});
-$('model').addEventListener('change', e=>{
-  $('modelCustom').classList.toggle('hidden', e.target.value!=='__custom__');
-});
-
+$('model').addEventListener('change',e=>{$('modelCustom').classList.toggle('hidden',e.target.value!=='__custom__');});
 function renderExamples(){
-  $('examples').innerHTML = EXAMPLES.map((e,i)=>`<div class="ex" data-i="${i}" title="${escapeHtml(e[1])}">${escapeHtml(e[0])}</div>`).join('');
-  $('exCards').innerHTML = EXAMPLES.map((e,i)=>`<div class="ex-card" data-i="${i}"><div class="k">${escapeHtml(e[0])}</div>${escapeHtml(e[1])}</div>`).join('');
-  document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{
-    const e=EXAMPLES[+el.dataset.i]; $('problem').value=e[1]; $('problem').focus();
-    window.scrollTo({top:0,behavior:'smooth'});
-  }));
+  $('examples').innerHTML=EXAMPLES.map((e,i)=>`<div class="ex" data-i="${i}" title="${escapeHtml(e[1])}">${escapeHtml(e[0])}</div>`).join('');
+  $('exCards').innerHTML=EXAMPLES.map((e,i)=>`<div class="ex-card" data-i="${i}"><div class="k">${escapeHtml(e[0])}</div>${escapeHtml(e[1])}</div>`).join('');
+  document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{const e=EXAMPLES[+el.dataset.i];$('problem').value=e[1];$('problem').focus();window.scrollTo({top:0,behavior:'smooth'});}));
 }
 renderExamples();
-
-function isVerified(steps){
-  return (steps||[]).some(s=>s.type==='tool' && !/\[(python|lean)\]\s*(exited|TIMEOUT|UNAVAILABLE|disabled|NOT_)/.test(String(s.output)) && !String(s.output).includes('Error'));
-}
-function metricsHtml(d){
-  const u=d.usage||{}; const tools=(d.steps||[]).filter(s=>s.type==='tool').length; const m=[];
-  m.push(['model', escapeHtml((d.model||'—').replace('openrouter/',''))]);
-  m.push(['tokens in→out', `${u.prompt_tokens||0} → ${u.completion_tokens||0}`]);
-  m.push(['total', u.total_tokens||0]);
-  if(u.cost_usd) m.push(['cost', `$${Number(u.cost_usd).toFixed(4)}`]);
-  m.push(['time', `${d.elapsed_s}s`]); m.push(['llm calls', u.llm_calls||0]); m.push(['tool runs', tools]);
+function isVerified(steps){return (steps||[]).some(s=>s.type==='tool'&&!/\[(python|lean)\]\s*(exited|TIMEOUT|UNAVAILABLE|disabled|NOT_)/.test(String(s.output))&&!String(s.output).includes('Error'));}
+function metricsHtml(d){const u=d.usage||{};const tools=(d.steps||[]).filter(s=>s.type==='tool').length;const m=[];
+  m.push(['model',escapeHtml((d.model||'—').replace('openrouter/',''))]);
+  m.push(['tokens in→out',`${u.prompt_tokens||0} → ${u.completion_tokens||0}`]);
+  if(u.cost_usd) m.push(['cost',`$${Number(u.cost_usd).toFixed(4)}`]);
+  m.push(['time',`${d.elapsed_s}s`]); m.push(['llm calls',u.llm_calls||0]); m.push(['tools',tools]);
   return m.map(x=>`<div class="metric"><div class="k">${x[0]}</div><div class="v">${x[1]}</div></div>`).join('');
 }
-function timelineHtml(steps){
-  return (steps||[]).map(s=>{
-    if(s.type==='llm'){
-      const u=s.usage||{}; const tok=(u.prompt_tokens||u.completion_tokens)?`<span class="tok">${u.prompt_tokens||0}→${u.completion_tokens||0} tok</span>`:'';
-      const body=s.reasoning?`<div style="margin-top:4px;color:var(--muted)">${escapeHtml(s.reasoning)}</div>`:'';
-      return `<div class="turn"><div class="head"><b>Step ${s.turn}</b> · model reasons ${tok}</div>${body}</div>`;
-    }
-    if(s.type==='tool') return `<div class="turn tool"><div class="head"><b>${escapeHtml(s.tool)}</b> tool</div><pre>${escapeHtml(s.input)}</pre><div class="tok">→ result</div><pre>${escapeHtml(s.output)}</pre></div>`;
-    if(s.type==='final') return `<div class="turn final"><div class="head"><b>final answer produced</b></div></div>`;
-    return '';
-  }).join('');
-}
+function timelineHtml(steps){return (steps||[]).map(s=>{
+  if(s.type==='llm'){const u=s.usage||{};const t=(u.prompt_tokens||u.completion_tokens)?`<span class="tok">${u.prompt_tokens||0}→${u.completion_tokens||0} tok</span>`:'';
+    return `<div class="turn"><div class="head"><b>Step ${s.turn}</b> · model reasons ${t}</div>${s.reasoning?`<div style="margin-top:4px;color:var(--muted)">${escapeHtml(s.reasoning)}</div>`:''}</div>`;}
+  if(s.type==='tool')return `<div class="turn tool"><div class="head"><b>${escapeHtml(s.tool)}</b> tool</div><pre>${escapeHtml(s.input)}</pre><div class="tok">→ result</div><pre>${escapeHtml(s.output)}</pre></div>`;
+  if(s.type==='final')return `<div class="turn final"><div class="head"><b>final answer produced</b></div></div>`;
+  return '';}).join('');}
 function renderResult(d){
-  $('emptyState').classList.add('hidden');
-  const body=$('resultBody'); body.classList.remove('hidden');
+  $('emptyState').classList.add('hidden');const body=$('resultBody');body.classList.remove('hidden');
   const files=d.files||{};
-  const verified = isVerified(d.steps) ? `<span class="verified">✓ ${(d.steps||[]).some(s=>s.tool==='lean')?'Lean':'Python'} verified</span>` : '';
-  body.innerHTML = `
-    <div class="answer-banner">
-      <div><div class="lab">answer</div><div class="val">${d.answer?`$\\boxed{${d.answer}}$`:'<span style="color:var(--muted)">see solution</span>'}</div></div>
-      ${verified}</div>
+  const verified=isVerified(d.steps)?`<span class="verified">✓ ${(d.steps||[]).some(s=>s.tool==='lean')?'Lean':'Python'} verified</span>`:'';
+  body.innerHTML=`
+    <div class="answer-banner"><div><div class="lab">answer</div><div class="val">${d.answer?`$\\boxed{${d.answer}}$`:'<span style="color:var(--muted)">see solution</span>'}</div></div>${verified}</div>
     <div class="metrics">${metricsHtml(d)}</div>
-    <div class="tabs">
-      <div class="tab active" data-t="sol">Solution</div>
-      <div class="tab" data-t="proc">Process <span class="tok">(${(d.steps||[]).length})</span></div>
-      <div class="tab" data-t="tex">LaTeX</div></div>
+    <div class="tabs"><div class="tab active" data-t="sol">Solution</div><div class="tab" data-t="proc">Process <span class="tok">(${(d.steps||[]).length})</span></div><div class="tab" data-t="tex">LaTeX</div></div>
     <div>
-      <div data-p="sol"><div class="sol">${latexToHtml(d.solution)}</div>
-        <div class="row-actions">${Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('')}</div></div>
+      <div data-p="sol"><div class="sol">${latexToHtml(d.solution)}</div><div class="row-actions">${Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">↓ ${k}</a>`).join('')}</div></div>
       <div data-p="proc" class="hidden"><div class="timeline">${timelineHtml(d.steps)}</div></div>
-      <div data-p="tex" class="hidden"><pre>${escapeHtml(d.solution)}</pre>
-        <div class="row-actions"><button class="btn-ghost" id="copyTex">Copy LaTeX</button>
-        ${Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('')}</div></div>
+      <div data-p="tex" class="hidden"><pre>${escapeHtml(d.solution)}</pre><div class="row-actions"><button class="btn-ghost" id="copyTex">Copy LaTeX</button>${Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">↓ ${k}</a>`).join('')}</div></div>
     </div>`;
-  body.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-    body.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
-    body.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==t.dataset.t));
-  }));
-  const copy=$('copyTex'); if(copy) copy.addEventListener('click',()=>{navigator.clipboard.writeText(d.solution||'');copy.textContent='Copied ✓';setTimeout(()=>copy.textContent='Copy LaTeX',1200);});
+  body.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{body.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));body.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==t.dataset.t));}));
+  const c=$('copyTex');if(c)c.addEventListener('click',()=>{navigator.clipboard.writeText(d.solution||'');c.textContent='Copied ✓';setTimeout(()=>c.textContent='Copy LaTeX',1200);});
   typeset(body);
 }
 function addHistory(d){
   state.history.unshift(d);
-  $('history').innerHTML = state.history.map((h,i)=>
-    `<div class="it" data-h="${i}"><div class="q">${escapeHtml(h.problem)}</div><div class="a">${escapeHtml(h.answer||'—')} · ${escapeHtml((h.model||'').replace('openrouter/',''))}</div></div>`).join('');
+  $('history').innerHTML=state.history.map((h,i)=>`<div class="it" data-h="${i}"><div class="q">${escapeHtml(h.problem)}</div><div class="a">${escapeHtml(h.answer||'—')} · ${escapeHtml((h.model||'').replace('openrouter/',''))}</div></div>`).join('');
   $('history').querySelectorAll('[data-h]').forEach(el=>el.addEventListener('click',()=>renderResult(state.history[+el.dataset.h])));
 }
-function liveMeterHtml(run, t0){
-  const u=run||{};
-  return `<b>${u.total_tokens||0}</b> tok &nbsp;·&nbsp; <b>$${Number(u.cost_usd||0).toFixed(4)}</b>`
-       + ` &nbsp;·&nbsp; <b>${((Date.now()-t0)/1000).toFixed(1)}s</b>`
-       + ` &nbsp;·&nbsp; ${u.llm_calls||0} calls`;
-}
 async function solve(){
-  const problem=$('problem').value.trim(); if(!problem) return;
-  const btn=$('go'); btn.disabled=true;
-  $('emptyState').classList.add('hidden');
-  const body=$('resultBody'); body.classList.remove('hidden');
-  const t0=Date.now();
-  let run={};
-  body.innerHTML=`
-    <div class="answer-banner" style="background:var(--surface2);border-color:var(--line)">
-      <div><div class="lab">working…</div><div class="val"><span class="spinner"></span> <span id="liveAct">starting…</span></div></div>
-      <span class="verified" id="liveMeter" style="background:var(--surface);color:var(--muted);border-color:var(--line)">0 tok · $0.0000 · 0.0s</span>
-    </div>
-    <div class="timeline" id="liveTl"></div>`;
-  const liveSteps=[];
-  const tick=setInterval(()=>{const e=$('liveMeter'); if(e) e.innerHTML=liveMeterHtml(run,t0);},100);
-  const setAct=t=>{const e=$('liveAct'); if(e) e.textContent=t;};
-  const redraw=()=>{const e=$('liveTl'); if(e){ e.innerHTML=timelineHtml(liveSteps); typeset(e);} };
-
+  const problem=$('problem').value.trim();if(!problem)return;
+  const btn=$('go');btn.disabled=true;
+  $('emptyState').classList.add('hidden');const body=$('resultBody');body.classList.remove('hidden');
+  const t0=Date.now();let run={};let buf='';
+  body.innerHTML=`<div class="stream-head"><span class="pulse"></span> <span id="liveAct">thinking…</span><span class="meter" id="liveMeter">0 tok · 0.0s</span></div><div class="stream-text" id="liveText"></div>`;
+  const liveText=$('liveText');
+  const fmtMeter=()=>{const u=run;const est=u.total_tokens||Math.round(buf.length/4);const cost=u.cost_usd?` · <b>$${Number(u.cost_usd).toFixed(4)}</b>`:'';return `<b>${est}</b> tok${cost} · <b>${((Date.now()-t0)/1000).toFixed(1)}s</b>`;};
+  const tick=setInterval(()=>{const e=$('liveMeter');if(e)e.innerHTML=fmtMeter();},120);
+  const setAct=t=>{const e=$('liveAct');if(e)e.textContent=t;};
   try{
-    const req={problem, format:$('format').value, enable_python:$('python').checked, enable_lean:$('lean').checked};
-    let m=$('model').value; if(m==='__custom__') m=$('modelCustom').value.trim(); if(m) req.model=m;
+    const req={problem,format:$('format').value,enable_python:$('python').checked,enable_lean:$('lean').checked};
+    let m=$('model').value;if(m==='__custom__')m=$('modelCustom').value.trim();if(m)req.model=m;
     const r=await fetch('/api/solve_stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
-    if(!r.ok||!r.body){ const d=await r.json().catch(()=>({})); throw new Error(d.error||('HTTP '+r.status)); }
-    const reader=r.body.getReader(); const dec=new TextDecoder(); let buf='';
-    let finished=false;
-    while(!finished){
-      const {value,done}=await reader.read(); if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      let nl;
-      while((nl=buf.indexOf('\n'))>=0){
-        const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
-        if(!line) continue;
+    if(!r.ok||!r.body){const d=await r.json().catch(()=>({}));throw new Error(d.error||('HTTP '+r.status));}
+    const reader=r.body.getReader();const dec=new TextDecoder();let sbuf='';let done=false;
+    while(!done){
+      const {value,done:fin}=await reader.read();if(fin)break;
+      sbuf+=dec.decode(value,{stream:true});let nl;
+      while((nl=sbuf.indexOf('\n'))>=0){
+        const line=sbuf.slice(0,nl).trim();sbuf=sbuf.slice(nl+1);if(!line)continue;
         const ev=JSON.parse(line);
-        if(ev.ev==='step'){
-          if(ev.running) run=ev.running;
-          if(ev.type==='llm'){ setAct(`step ${ev.turn}: reasoning`); liveSteps.push(ev); redraw(); }
-          else if(ev.type==='tool_start'){ setAct(`running ${ev.tool}…`); }
-          else if(ev.type==='tool'){ setAct(`${ev.tool} done`); liveSteps.push(ev); redraw(); }
-          $('liveMeter').innerHTML=liveMeterHtml(run,t0);
-        } else if(ev.ev==='done'){
-          clearInterval(tick); finished=true;
-          const d=ev.result; d.problem=problem; renderResult(d); addHistory(d);
-        } else if(ev.ev==='error'){
-          clearInterval(tick); finished=true;
-          body.innerHTML=`<div class="err">${escapeHtml(ev.error)}</div>`;
+        if(ev.ev==='token'){ buf+=ev.text; if(liveText){liveText.textContent=buf; liveText.scrollTop=liveText.scrollHeight;} setAct('writing…'); }
+        else if(ev.ev==='step'){ if(ev.running)run=ev.running;
+          if(ev.type==='tool_start'){ setAct(`running ${ev.tool}…`); buf+=`\n\n[running ${ev.tool}…]\n`; if(liveText)liveText.textContent=buf; }
+          else if(ev.type==='tool'){ buf+=`${ev.output}\n`; if(liveText){liveText.textContent=buf;liveText.scrollTop=liveText.scrollHeight;} }
+          else if(ev.type==='llm'){ setAct(`step ${ev.turn} done`); }
+          $('liveMeter').innerHTML=fmtMeter();
         }
+        else if(ev.ev==='done'){ clearInterval(tick);done=true;const d=ev.result;d.problem=problem;renderResult(d);addHistory(d); }
+        else if(ev.ev==='error'){ clearInterval(tick);done=true;body.innerHTML=`<div class="err">${escapeHtml(ev.error)}</div>`; }
       }
     }
-  }catch(e){ clearInterval(tick); body.innerHTML=`<div class="err">${escapeHtml(e.message||e)}</div>`; }
-  finally{ clearInterval(tick); btn.disabled=false; }
+  }catch(e){clearInterval(tick);body.innerHTML=`<div class="err">${escapeHtml(e.message||e)}</div>`;}
+  finally{clearInterval(tick);btn.disabled=false;}
 }
-$('go').addEventListener('click', solve);
-$('problem').addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') solve(); });
+$('go').addEventListener('click',solve);
+$('problem').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')solve();});
 </script>
 </body>
 </html>

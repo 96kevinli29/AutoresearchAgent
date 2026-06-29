@@ -15,6 +15,52 @@ from typing import Any
 
 from agent_evolve.llm.base import LLMMessage, LLMProvider, LLMResponse
 
+_OR_PRICES: dict = {"ts": 0.0, "map": None}
+
+
+def _openrouter_prices() -> dict | None:
+    """{model_id: (prompt_price_per_tok, completion_price_per_tok)} from OpenRouter."""
+    import time as _t
+
+    if _OR_PRICES["map"] is not None and _t.time() - _OR_PRICES["ts"] < 1800:
+        return _OR_PRICES["map"]
+    try:
+        import json
+        import os
+        import urllib.request
+
+        key = os.environ.get("OPENROUTER_API_KEY")
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/models",
+            headers={"Authorization": f"Bearer {key}"} if key else {},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.load(r)["data"]
+        m = {}
+        for x in data:
+            p = x.get("pricing") or {}
+            try:
+                m[x["id"]] = (float(p.get("prompt", 0)), float(p.get("completion", 0)))
+            except Exception:
+                pass
+        _OR_PRICES.update(ts=_t.time(), map=m)
+        return m
+    except Exception:
+        return _OR_PRICES["map"]
+
+
+def _or_cost(model: str, pt: int, ct: int) -> float | None:
+    """Compute USD cost for an openrouter/* model from token counts × unit price."""
+    if not model.startswith("openrouter/"):
+        return None
+    prices = _openrouter_prices()
+    if not prices:
+        return None
+    pr = prices.get(model[len("openrouter/"):])
+    if not pr:
+        return None
+    return pt * pr[0] + ct * pr[1]
+
 
 class LiteLLMProvider(LLMProvider):
     """Route completions through LiteLLM so any backend works unchanged."""
@@ -42,19 +88,25 @@ class LiteLLMProvider(LLMProvider):
         messages: list[LLMMessage],
         max_tokens: int | None = None,
         temperature: float | None = None,
+        on_token=None,
         **kwargs: Any,
     ) -> LLMResponse:
         import litellm
 
         cap = max_tokens or self.max_tokens  # None => uncapped (model's max)
         extra = {"max_tokens": cap} if cap else {}
-        resp = litellm.completion(
+        params = dict(
             model=self.model,
             messages=self._to_dicts(messages),
             temperature=self.temperature if temperature is None else temperature,
             **extra,
             **{**self.client_kwargs, **kwargs},
         )
+        if on_token is not None:  # token-by-token streaming (falls back on error)
+            streamed = self._stream(litellm, params, on_token)
+            if streamed is not None:
+                return streamed
+        resp = litellm.completion(**params)
         choice = resp.choices[0]
         content = choice.message.content or ""
         if not content.strip():  # reasoning models may put text in a reasoning field
@@ -82,6 +134,48 @@ class LiteLLMProvider(LLMProvider):
             usage["cost_usd"] = float(cost)
         usage["model"] = self.model
         return LLMResponse(content=content, usage=usage, raw=resp)
+
+    def _stream(self, litellm, params, on_token) -> LLMResponse | None:
+        """Stream the completion, calling ``on_token(delta)`` per chunk. Returns a
+        full LLMResponse, or None to signal the caller to fall back to non-stream."""
+        try:
+            sp = {**params, "stream": True, "stream_options": {"include_usage": True}}
+            parts: list[str] = []
+            usage: dict = {}
+            cost = None
+            last = None
+            for chunk in litellm.completion(**sp):
+                last = chunk
+                try:
+                    delta = chunk.choices[0].delta
+                    piece = getattr(delta, "content", None) or getattr(
+                        delta, "reasoning_content", None
+                    ) or ""
+                    if piece:
+                        parts.append(piece)
+                        on_token(piece)
+                except (IndexError, AttributeError):
+                    pass
+                u = getattr(chunk, "usage", None)
+                if u:
+                    pt = getattr(u, "prompt_tokens", 0) or 0
+                    ct = getattr(u, "completion_tokens", 0) or 0
+                    usage = {"prompt_tokens": pt, "completion_tokens": ct,
+                             "total_tokens": getattr(u, "total_tokens", pt + ct) or (pt + ct)}
+                    cost = cost or getattr(u, "cost", None)
+        except Exception:
+            return None
+        content = "".join(parts)
+        if not content.strip():
+            return None  # nothing streamed — let the non-stream path try
+        if usage:
+            cost = cost or (getattr(last, "_hidden_params", {}) or {}).get("response_cost")
+            if not cost:
+                cost = _or_cost(self.model, usage["prompt_tokens"], usage["completion_tokens"])
+            if cost:
+                usage["cost_usd"] = float(cost)
+        usage["model"] = self.model
+        return LLMResponse(content=content, usage=usage, raw=None)
 
     def complete_with_tools(
         self,
