@@ -1,0 +1,26 @@
+[project]
+name = "mathagent"
+version = "0.1.0"
+description = "End-to-end math problem-solving / proof agent on top of A-Evolve, with optional Python & Lean verification and LaTeX/docx output."
+requires-python = ">=3.10"
+dependencies = [
+    "a-evolve>=0.1.0",
+    "litellm>=1.0",
+    "sympy>=1.12",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+web = ["fastapi>=0.110", "uvicorn>=0.29"]
+docx = ["pypandoc-binary>=1.13"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+mathagent = "mathagent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mathagent"]

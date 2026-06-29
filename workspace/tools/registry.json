@@ -1,0 +1,18 @@
+{
+  "tools": [
+    {
+      "name": "python",
+      "syntax": "<tool:python> ...code... </tool>",
+      "description": "Run Python with sympy/numpy preimported; print() results to compute or check claims.",
+      "capability": "compute",
+      "enabled_by_default": true
+    },
+    {
+      "name": "lean",
+      "syntax": "<tool:lean> ...lean4... </tool>",
+      "description": "Verify a Lean 4 statement/proof; accepted only if it compiles with no `sorry`.",
+      "capability": "formal-verify",
+      "enabled_by_default": false
+    }
+  ]
+}

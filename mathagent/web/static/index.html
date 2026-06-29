@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mathagent</title>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+  };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --line:#262b38; --fg:#e6e9ef; --muted:#9aa3b2; --accent:#6ea8fe; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+         background:var(--bg); color:var(--fg); }
+  header { padding:14px 22px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:12px; }
+  header h1 { font-size:18px; margin:0; letter-spacing:.3px; }
+  header .sub { color:var(--muted); font-size:13px; }
+  main { max-width:920px; margin:0 auto; padding:22px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:18px; }
+  textarea { width:100%; min-height:110px; resize:vertical; background:#0d0f15; color:var(--fg);
+             border:1px solid var(--line); border-radius:8px; padding:11px; font-size:15px; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; }
+  label { font-size:13px; color:var(--muted); display:flex; gap:6px; align-items:center; }
+  select, input[type=text] { background:#0d0f15; color:var(--fg); border:1px solid var(--line);
+             border-radius:7px; padding:6px 8px; font-size:13px; }
+  button { background:var(--accent); color:#0b1020; border:0; border-radius:8px; padding:10px 18px;
+           font-weight:600; cursor:pointer; font-size:14px; }
+  button:disabled { opacity:.55; cursor:default; }
+  .answer { font-size:15px; }
+  .answer .tag { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.6px; }
+  pre { background:#0d0f15; border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto;
+        font-size:12.5px; color:#c8cedb; }
+  .files a { color:var(--accent); margin-right:14px; text-decoration:none; }
+  .muted { color:var(--muted); }
+  details summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  .err { color:#ff8a8a; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--muted);
+             border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>mathagent</h1>
+  <span class="sub" id="cfg">…</span>
+</header>
+<main>
+  <div class="card">
+    <textarea id="problem" placeholder="Enter a math problem or a statement to prove…
+e.g. Find all real solutions of x^2 - 5x + 6 = 0."></textarea>
+    <div class="row">
+      <label>format
+        <select id="format">
+          <option value="pdf">pdf</option>
+          <option value="latex">latex</option>
+          <option value="docx">docx</option>
+          <option value="none">none</option>
+        </select>
+      </label>
+      <label>model
+        <input type="text" id="model" placeholder="(server default)" size="26" />
+      </label>
+      <label><input type="checkbox" id="python" checked /> Python</label>
+      <label><input type="checkbox" id="lean" /> Lean</label>
+      <button id="go">Solve</button>
+    </div>
+  </div>
+
+  <div class="card" id="out" style="display:none">
+    <div class="answer" id="answer"></div>
+    <div id="solution" style="margin-top:14px"></div>
+    <div class="files" id="files" style="margin-top:14px"></div>
+    <details id="trace" style="margin-top:12px"><summary>tool calls</summary><div id="traceBody"></div></details>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+fetch('/api/health').then(r=>r.json()).then(h=>{
+  $('cfg').textContent = `provider: ${h.provider}  ·  model: ${h.model||'default'}  ·  python: ${h.python}  ·  lean: ${h.lean}`;
+}).catch(()=>{ $('cfg').textContent=''; });
+
+async function solve(){
+  const problem = $('problem').value.trim();
+  if(!problem){ return; }
+  const btn = $('go'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  $('out').style.display='block';
+  $('answer').innerHTML=''; $('solution').innerHTML='<span class="muted">solving…</span>';
+  $('files').innerHTML=''; $('traceBody').innerHTML='';
+  try{
+    const body = {
+      problem,
+      format: $('format').value,
+      enable_python: $('python').checked,
+      enable_lean: $('lean').checked,
+    };
+    const m = $('model').value.trim(); if(m) body.model = m;
+    const r = await fetch('/api/solve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await r.json();
+    if(!r.ok || data.error){
+      $('solution').innerHTML = `<span class="err">${data.error || ('HTTP '+r.status)}</span>`;
+      return;
+    }
+    $('answer').innerHTML = data.answer
+      ? `<span class="tag">answer</span> &nbsp; $\\boxed{${data.answer}}$`
+      : `<span class="tag muted">no boxed answer extracted</span>`;
+    $('solution').textContent = data.solution || '';
+    const files = data.files || {};
+    $('files').innerHTML = Object.keys(files).length
+      ? Object.entries(files).map(([k,u])=>`<a href="${u}" target="_blank">⬇ ${k}</a>`).join('')
+      : '';
+    const calls = data.tool_calls || [];
+    $('trace').style.display = calls.length ? 'block':'none';
+    $('traceBody').innerHTML = calls.map(c=>`<div class="muted" style="margin-top:8px">${c.tool}</div><pre>${escapeHtml(c.input)}\n→ ${escapeHtml(String(c.output))}</pre>`).join('');
+    if(window.MathJax && MathJax.typesetPromise){ await MathJax.typesetPromise([$('answer'),$('solution')]); }
+  }catch(e){
+    $('solution').innerHTML = `<span class="err">${e}</span>`;
+  }finally{
+    btn.disabled=false; btn.textContent='Solve';
+  }
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+$('go').addEventListener('click', solve);
+$('problem').addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') solve(); });
+</script>
+</body>
+</html>

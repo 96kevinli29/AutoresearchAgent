@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+.claude/
+/tmp/
+out/*
+!out/.gitkeep
+evolution_workdir*/
+*.aux
+*.log
+*.out
+*.pdf

@@ -1,0 +1,10 @@
+name: mathagent-workspace
+version: 0.1.0
+contract_version: "1.0"
+agent_type: reference
+entrypoint: null
+evolvable_layers:
+  - prompts
+  - skills
+  - memory
+reload_strategy: hot
