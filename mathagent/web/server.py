@@ -107,6 +107,7 @@ class SolveRequest(BaseModel):
     enable_lean: bool | None = None
     format: str = "pdf"  # none | latex | pdf | docx
     max_steps: int = 8
+    max_cost_usd: float | None = None
 
 
 def create_app(
@@ -126,6 +127,7 @@ def create_app(
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
+    _env_cap = os.environ.get("MATHAGENT_MAX_COST")
     app.state.cfg = dict(
         workspace=workspace,
         provider_kind=provider_kind,
@@ -133,6 +135,7 @@ def create_app(
         enable_python=enable_python,
         enable_lean=enable_lean,
         out_dir=out_dir,
+        max_cost=float(_env_cap) if _env_cap else None,
     )
 
     app.mount("/files", StaticFiles(directory=out_dir), name="files")
@@ -184,7 +187,10 @@ def create_app(
         py = cfg["enable_python"] if req.enable_python is None else req.enable_python
         ln = cfg["enable_lean"] if req.enable_lean is None else req.enable_lean
         tools = default_registry(python=py, lean=ln)
-        agent = MathAgent(cfg["workspace"], prov, tools=tools, max_steps=req.max_steps)
+        agent = MathAgent(
+            cfg["workspace"], prov, tools=tools, max_steps=req.max_steps,
+            max_cost_usd=(req.max_cost_usd if req.max_cost_usd is not None else cfg["max_cost"]),
+        )
 
         t0 = time.time()
         try:
@@ -226,7 +232,10 @@ def create_app(
         py = cfg["enable_python"] if req.enable_python is None else req.enable_python
         ln = cfg["enable_lean"] if req.enable_lean is None else req.enable_lean
         tools = default_registry(python=py, lean=ln)
-        agent = MathAgent(cfg["workspace"], prov, tools=tools, max_steps=req.max_steps)
+        agent = MathAgent(
+            cfg["workspace"], prov, tools=tools, max_steps=req.max_steps,
+            max_cost_usd=(req.max_cost_usd if req.max_cost_usd is not None else cfg["max_cost"]),
+        )
         model = req.model or _resolved_model()
 
         q: queue.Queue = queue.Queue()

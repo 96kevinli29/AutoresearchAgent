@@ -50,11 +50,15 @@ class MathAgent(BaseAgent):
         tools: ToolRegistry | None = None,
         max_steps: int = 8,
         max_tokens: int | None = None,  # None => uncapped output (hard problems)
+        max_cost_usd: float | None = None,  # per-solve $ budget (None => no cap)
+        max_total_tokens: int | None = None,  # per-solve token budget (None => no cap)
     ) -> None:
         self.provider = provider
         self.tools = tools or ToolRegistry()
         self.max_steps = max_steps
         self.max_tokens = max_tokens
+        self.max_cost_usd = max_cost_usd
+        self.max_total_tokens = max_total_tokens
         self.last_usage: dict = {}
         super().__init__(workspace_dir)  # populates system_prompt, skills, memories
 
@@ -118,6 +122,14 @@ class MathAgent(BaseAgent):
         return "\n\n".join(parts)
 
     # ---- the solve loop ---------------------------------------------------
+
+    def _over_budget(self) -> str | None:
+        u = self.last_usage
+        if self.max_cost_usd and u.get("cost_usd", 0) >= self.max_cost_usd:
+            return "cost"
+        if self.max_total_tokens and u.get("total_tokens", 0) >= self.max_total_tokens:
+            return "tokens"
+        return None
 
     def _track(self, usage: dict) -> None:
         t = self.last_usage
@@ -186,6 +198,14 @@ class MathAgent(BaseAgent):
             if _FINAL_RE.search(text) or not calls:
                 solution = _extract_solution(text)
                 steps.append({"type": "final", "output": solution})
+                return _traj(solution)
+
+            # budget guard: stop before spending more if a per-solve cap is hit
+            over = self._over_budget()
+            if over:
+                solution = _extract_solution(text) or text.strip()
+                steps.append({"type": "final", "output": solution, "stopped": over})
+                _emit({"ev": "step", "type": "budget", "reason": over})
                 return _traj(solution)
 
             results = []

@@ -33,7 +33,8 @@ def _make_agent(args) -> MathAgent:
     provider = build_provider(args.provider, model=getattr(args, "model", None))
     tools = default_registry(python=args.python, lean=args.lean)
     ws = resolve_workspace(args.workspace)
-    return MathAgent(ws, provider, tools=tools, max_steps=args.max_steps)
+    return MathAgent(ws, provider, tools=tools, max_steps=args.max_steps,
+                     max_tokens=args.max_tokens, max_cost_usd=args.max_cost)
 
 
 def cmd_solve(args) -> int:
@@ -188,7 +189,9 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--model", default=None, help="LiteLLM model id, e.g. anthropic/claude-opus-4-6")
     common.add_argument("--python", action="store_true", help="enable the Python (sympy) verification tool")
     common.add_argument("--lean", action="store_true", help="enable Lean verification")
-    common.add_argument("--max-steps", type=int, default=8)
+    common.add_argument("--max-steps", type=int, default=8, help="max LLM calls per solve (loop bound)")
+    common.add_argument("--max-cost", type=float, default=None, help="per-solve USD budget; stop if exceeded (default: no cap)")
+    common.add_argument("--max-tokens", type=int, default=None, help="cap output tokens per LLM call (default: uncapped)")
 
     sub = p.add_subparsers(dest="cmd", required=True)
 
