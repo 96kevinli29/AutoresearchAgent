@@ -105,6 +105,13 @@ On an HPC login node, reach the UI from your laptop with an SSH tunnel:
 
 ---
 
+## Cost control
+Output is uncapped by default so hard problems aren't truncated; total spend per
+solve is bounded by `--max-steps` (default 8 LLM calls). Optional caps:
+- `--max-cost 0.50` (CLI) or `MATHAGENT_MAX_COST=0.50` (env, web) — stop a solve once it has spent that much USD.
+- `--max-tokens N` — cap output tokens per call.
+- In the web UI, the **cost cap — $ per solve** field sets a per-request budget.
+
 ## Notes
 - PDF output needs a LaTeX install (`pdflatex`); `.docx` uses a bundled pandoc (no setup); `.tex` always works.
 - Math renders with a vendored KaTeX (works offline).

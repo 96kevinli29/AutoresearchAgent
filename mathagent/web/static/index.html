@@ -112,7 +112,7 @@
 <div class="topbar">
   <div class="logo"><span class="mark">∑</span> mathagent</div>
   <span class="tagline">math solving &amp; proofs</span>
-  <div class="right"><span class="badge">studio · v11</span><span class="dot"></span><span id="cfg">…</span></div>
+  <div class="right"><span class="badge">studio · v12</span><span class="dot"></span><span id="cfg">…</span></div>
 </div>
 
 <div class="app">
@@ -139,6 +139,9 @@
         </select>
       </label>
       <input type="text" id="modelCustom" class="hidden" style="margin-top:8px" placeholder="custom model id, e.g. openrouter/…" />
+      <label class="fld">cost cap — $ per solve (optional)
+        <input type="text" id="maxcost" placeholder="blank = no cap · e.g. 0.50" />
+      </label>
       <button class="primary" id="go">Solve</button>
     </div>
     <div class="card"><h3>Examples</h3><div class="chips" id="examples"></div></div>
@@ -247,6 +250,7 @@ async function solve(){
   try{
     const req={problem,format:$('format').value,enable_python:$('python').checked,enable_lean:$('lean').checked};
     let m=$('model').value;if(m==='__custom__')m=$('modelCustom').value.trim();if(m)req.model=m;
+    const mc=parseFloat($('maxcost').value);if(mc>0)req.max_cost_usd=mc;
     const r=await fetch('/api/solve_stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
     if(!r.ok||!r.body){const d=await r.json().catch(()=>({}));throw new Error(d.error||('HTTP '+r.status));}
     const reader=r.body.getReader();const dec=new TextDecoder();let sbuf='';let done=false;
