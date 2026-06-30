@@ -1,98 +1,111 @@
 # mathagent
 
-An end-to-end **math problem-solving / proof agent**, built on the
-[A-Evolve](https://github.com/A-EVO-Lab/a-evolve) agentic-evolution framework.
+An end-to-end **math problem-solving & proof agent**. Type a problem, watch the
+solution stream in, and download it as LaTeX / PDF / Word — from a clean web UI
+or the command line.
 
-- **Brain:** any LLM via **LiteLLM** (Claude / OpenAI / DeepSeek / self-hosted vLLM).
-- **Optional verification capabilities:** Python (sympy/numpy) computation, and Lean 4
-  formal verification — each toggleable.
-- **Output:** LaTeX (`.tex`/`.pdf`) and Word (`.docx`).
-- **Self-improving:** the agent's prompt/skills/memory live in an evolvable `workspace/`
-  that A-Evolve mutates against a math benchmark, keeping only changes that help (git-tracked).
+- 🧠 **Any model** via [LiteLLM](https://github.com/BerriAI/litellm) / OpenRouter (Claude, GPT, DeepSeek, …) — one API key.
+- ⚡ **Live & transparent**: the answer streams token-by-token with a running **token + cost + time** meter.
+- 🔎 **Optional verification** (off by default): Python (sympy) computation and Lean 4 proof checking.
+- 📄 **Output**: LaTeX, PDF, and Word `.docx`.
+- 🧬 **Self-improving**: built on the [A-Evolve](https://github.com/A-EVO-Lab/a-evolve) agent framework — the agent's prompts/skills/memory live in a git-tracked workspace it can evolve against a benchmark.
 
-## Layout
+---
 
-```
-mathagent/            python package
-  llm/                LiteLLMProvider (drop-in for A-Evolve's LLMProvider) + MockProvider
-  agent/              MathAgent(BaseAgent): provider-agnostic tool loop
-  tools/              python_exec, lean_verify (M3), doc_export, registry (capability flags)
-  benchmarks/         MathBenchmark(BenchmarkAdapter): answer / sympy / proof checks
-  engine/             MathEvolutionEngine (M2)
-  cli.py              `mathagent solve|eval`
-workspace/            EVOLVABLE: manifest, prompts/system.md, skills/*/SKILL.md, tools, memory
-data/seed_problems.jsonl
-```
+## Quick start (≈30 seconds)
 
-## Install
+You need **Python 3.10+** and one API key (e.g. [OpenRouter](https://openrouter.ai/keys)).
 
 ```bash
-# online (no checkout needed):
+git clone https://github.com/96kevinli29/AutoresearchAgent.git
+cd AutoresearchAgent
+bash install.sh                       # sets up a venv and installs everything
+nano .env                             # paste your API key (file was created for you)
+.venv/bin/mathagent serve             # open http://127.0.0.1:8000
+```
+
+That's it — open the URL and ask a question.
+
+<details>
+<summary>Prefer pip (no clone)?</summary>
+
+```bash
 pip install "git+https://github.com/96kevinli29/AutoresearchAgent.git"
-
-# local (from a clone):
-pip install .            # or: pip install -e .  for dev
+export OPENROUTER_API_KEY=sk-or-...
+export MATHAGENT_MODEL=openrouter/anthropic/claude-sonnet-4.6
+mathagent serve
 ```
+</details>
 
-Everything works out of the box after install — the seed workspace is bundled and
-auto-created in `./workspace` on first run; CLI, web UI, and docx export are all
-included. (Lean is optional and installed separately, see below.)
+### `.env`
+```ini
+OPENROUTER_API_KEY=sk-or-...
+MATHAGENT_MODEL=openrouter/anthropic/claude-sonnet-4.6
+```
+Other models: `openrouter/anthropic/claude-opus-4.8`, `openrouter/openai/gpt-5.5`,
+`openrouter/deepseek/deepseek-v4-pro`, or any LiteLLM id. You can also switch model in the UI.
 
-## Quickstart
+---
 
+## Use it
+
+**Web** — `mathagent serve` then open the URL. Enter a problem, pick a model, click **Solve**.
+The solution streams in; download PDF/LaTeX/docx; switch to the **Process** tab to see every step.
+
+**Command line**
 ```bash
-# 1. smoke test (no API key needed)
-mathagent solve "Compute 2+2." --provider mock --format pdf
-
-# 2. real run
-cp .env.example .env   # set MATHAGENT_MODEL + API key (OpenRouter / Anthropic / OpenAI / …)
-mathagent solve "Find all real roots of x^2-5x+6=0." --format pdf   # or --format docx
-mathagent eval data/seed_problems.jsonl
-
-# 4. self-improve the workspace (verifier-grounded evolution, git-tracked)
-mathagent evolve data/seed_problems.jsonl --cycles 5            # LLM-driven mutations
-mathagent evolve data/seed_problems.jsonl --rule --cycles 4     # deterministic fallback
-.venv/bin/python scripts/evolve_demo.py                         # no-API-key mechanics self-test
-
-# 5. web UI / API (same core as the CLI) — "online use"
-mathagent serve --port 8000                  # real provider (set .env)
-mathagent serve --provider mock --port 8000  # no-key demo
-#   GET /              chat UI (MathJax) — shows model, token usage + cost,
-#                      elapsed time, and the full step-by-step process timeline
-#                      (each model turn + every tool call's code and output)
-#   POST /api/solve    {problem, format, model?, enable_python?, enable_lean?}
-#                      -> {solution, answer, files, model, elapsed_s, usage, steps}
-#   GET /files/<name>  generated .tex/.pdf/.docx
-
-# 6. (optional) enable Lean formal verification
-mathagent install-lean          # prints guidance
-mathagent install-lean --run    # installs elan + Lean toolchain (Mathlib is separate/heavy)
-mathagent solve "..." --lean    # use Lean as a verification capability
+mathagent solve "Find all real roots of x^2-5x+6=0." --format pdf
+mathagent eval data/seed_problems.jsonl          # score a problem set
+mathagent evolve data/seed_problems.jsonl        # self-improve the workspace
 ```
 
-## Verification capabilities (toggleable)
+**Optional verification** (off by default — plain model solve out of the box):
+```bash
+mathagent solve "…" --python        # let the agent verify with sympy
+mathagent solve "…" --lean          # formal check (run `mathagent install-lean` first)
+```
+In the web UI, tick the **Python** / **Lean** boxes. When enabled, the agent decides
+on its own when to call them.
 
-- **Python** (`sympy`/`numpy`) — on by default; `--no-python` to disable.
-- **Lean 4** — off by default; opt in with `--lean`. If Lean isn't installed, the tool
-  returns install guidance and you run `mathagent install-lean --run`.
+---
 
-## Evolution (M2)
+## How it works
 
-`MathEvolutionEngine` turns verifier evidence (wrong/missing boxed answers, Python
-tracebacks, later Lean errors) into a new reusable **skill**, then **self-gates**: it
-re-scores a held-out split and keeps the change only on strict improvement, reverting
-otherwise. The loop git-tags every cycle (`evo-N`) for a full audit trail. The demo
-self-test lifts a stub agent from score **0.0 → 1.0** by evolving one skill.
+It's a real agent (not a prompt wrapper), built on A-Evolve:
 
-## Milestones
+```
+problem → MathAgent loop:  reason → (optional tool: Python/Lean) → observe → finalize
+          reads its evolvable workspace (prompts · skills · memory)
+          → output: LaTeX / PDF / docx
+evolution engine: improves the workspace from verifier feedback (git-tracked)
+```
 
-- **M0** env bootstrap ✅
-- **M1** CLI MVP: solve → Python-verify → LaTeX/PDF ✅
-- **M2** evolution loop (verifier-grounded, self-gating, git-tracked) ✅
-- **M4** web frontend (FastAPI + MathJax chat UI) sharing the same core ✅
-- **M5** docx export + pip-installable (bundled workspace, local & online) ✅
-- **Lean** verification — optional capability with guided install (`mathagent install-lean`);
-  REPL bridge + Mathlib wiring lands when enabled
+| Layer | File | A-Evolve contract |
+|---|---|---|
+| Brain (any model) | `mathagent/llm/litellm_provider.py` | `LLMProvider` |
+| Agent loop | `mathagent/agent/math_agent.py` | `BaseAgent` |
+| Scoring | `mathagent/benchmarks/math_bench.py` | `BenchmarkAdapter` |
+| Self-improvement | `mathagent/engine/math_evolution.py` | `EvolutionEngine` |
+| Evolvable state | `workspace/` (prompts, skills, memory) | workspace contract |
 
-End-to-end verified with a real model (Sonnet 4.6 via OpenRouter): seed set scores **6/6**;
-CLI and web both produce LaTeX/PDF/docx.
+---
+
+## Deploy online
+
+It's a standard FastAPI app (`mathagent.web.server:app`):
+```bash
+mathagent serve --host 0.0.0.0 --port 8000          # VM
+# or: uvicorn mathagent.web.server:app --host 0.0.0.0 --port $PORT   # PaaS
+```
+Set your API key as an env var / secret. For public access add auth and keep
+`--python` off (it runs model-written code).
+
+On an HPC login node, reach the UI from your laptop with an SSH tunnel:
+`ssh -L 8000:127.0.0.1:8000 <you@cluster>` then open `http://localhost:8000`.
+
+---
+
+## Notes
+- PDF output needs a LaTeX install (`pdflatex`); `.docx` uses a bundled pandoc (no setup); `.tex` always works.
+- Math renders with a vendored KaTeX (works offline).
+- The first run creates `./workspace` from the bundled seed; edit those files to change the agent's behavior.

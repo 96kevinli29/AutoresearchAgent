@@ -112,7 +112,7 @@
 <div class="topbar">
   <div class="logo"><span class="mark">∑</span> mathagent</div>
   <span class="tagline">math solving &amp; proofs</span>
-  <div class="right"><span class="badge">studio · v10</span><span class="dot"></span><span id="cfg">…</span></div>
+  <div class="right"><span class="badge">studio · v11</span><span class="dot"></span><span id="cfg">…</span></div>
 </div>
 
 <div class="app">
@@ -240,6 +240,7 @@ async function solve(){
   const t0=Date.now();let run={};let buf='';
   body.innerHTML=`<div class="stream-head"><span class="pulse"></span> <span id="liveAct">thinking…</span><span class="meter" id="liveMeter">0 tok · 0.0s</span></div><div class="stream-text" id="liveText"></div>`;
   const liveText=$('liveText');
+  liveText.innerHTML='<span style="color:var(--faint)">Connecting to the model… the answer will stream in here.</span>';
   const fmtMeter=()=>{const u=run;const est=u.total_tokens||Math.round(buf.length/4);const cost=u.cost_usd?` · <b>$${Number(u.cost_usd).toFixed(4)}</b>`:'';return `<b>${est}</b> tok${cost} · <b>${((Date.now()-t0)/1000).toFixed(1)}s</b>`;};
   const tick=setInterval(()=>{const e=$('liveMeter');if(e)e.innerHTML=fmtMeter();},120);
   const setAct=t=>{const e=$('liveAct');if(e)e.textContent=t;};
@@ -259,7 +260,8 @@ async function solve(){
         else if(ev.ev==='step'){ if(ev.running)run=ev.running;
           if(ev.type==='tool_start'){ setAct(`running ${ev.tool}…`); buf+=`\n\n[running ${ev.tool}…]\n`; if(liveText)liveText.textContent=buf; }
           else if(ev.type==='tool'){ buf+=`${ev.output}\n`; if(liveText){liveText.textContent=buf;liveText.scrollTop=liveText.scrollHeight;} }
-          else if(ev.type==='llm'){ setAct(`step ${ev.turn} done`); }
+          else if(ev.type==='llm'){ setAct(`step ${ev.turn} done`);
+            if(!buf.trim() && ev.reasoning){ buf=ev.reasoning; if(liveText)liveText.textContent=buf; } }
           $('liveMeter').innerHTML=fmtMeter();
         }
         else if(ev.ev==='done'){ clearInterval(tick);done=true;const d=ev.result;d.problem=problem;renderResult(d);addHistory(d); }
