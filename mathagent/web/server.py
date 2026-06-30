@@ -5,9 +5,10 @@ identical. Run with ``mathagent serve`` (see cli.py) or::
 
     uvicorn mathagent.web.server:app --reload
 
+Verification tools (Python, Lean) are OFF by default — the plain model solve is the
+out-of-the-box experience. Enable them per request or with ``--python`` / ``--lean``.
 Security note: the Python tool executes model-written code in a subprocess (runs as
-*you*). For a multi-user/public deployment, start with ``--no-python`` or sandbox the
-runner (M5). For personal/trusted use it is fine.
+*you*); only enable it for trusted use, or sandbox the runner.
 """
 
 from __future__ import annotations
@@ -112,7 +113,7 @@ def create_app(
     workspace: str | None = None,
     provider_kind: str = "litellm",
     model: str | None = None,
-    enable_python: bool = True,
+    enable_python: bool = False,
     enable_lean: bool = False,
     out_dir: str = "out",
 ) -> FastAPI:
@@ -157,7 +158,7 @@ def create_app(
         return JSONResponse(
             {
                 "status": "ok",
-                "ui": "studio-v9-claude",
+                "ui": "studio-v10-plain",
                 "provider": cfg["provider_kind"],
                 "model": _resolved_model(),
                 "python": cfg["enable_python"],

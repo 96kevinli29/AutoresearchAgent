@@ -15,7 +15,7 @@ from .python_exec import run_python
 
 @dataclass
 class ToolRegistry:
-    enable_python: bool = True
+    enable_python: bool = False
     enable_lean: bool = False
     python_timeout: float = 15.0
     lean_timeout: float = 120.0
@@ -56,7 +56,7 @@ class ToolRegistry:
         return self._log
 
 
-def default_registry(python: bool = True, lean: bool = False) -> ToolRegistry:
+def default_registry(python: bool = False, lean: bool = False) -> ToolRegistry:
     if lean and not lean_available():
         # keep the flag but the tool itself will report unavailability
         pass

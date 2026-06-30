@@ -31,7 +31,7 @@ from .tools import default_registry, export
 
 def _make_agent(args) -> MathAgent:
     provider = build_provider(args.provider, model=getattr(args, "model", None))
-    tools = default_registry(python=not args.no_python, lean=args.lean)
+    tools = default_registry(python=args.python, lean=args.lean)
     ws = resolve_workspace(args.workspace)
     return MathAgent(ws, provider, tools=tools, max_steps=args.max_steps)
 
@@ -93,7 +93,7 @@ def cmd_evolve(args) -> int:
         shutil.copytree(resolve_workspace(args.workspace), work_ws)
 
     provider = build_provider(args.provider, model=args.model)
-    tools = default_registry(python=not args.no_python, lean=args.lean)
+    tools = default_registry(python=args.python, lean=args.lean)
     agent = MathAgent(work_ws, provider, tools=tools, max_steps=args.max_steps)
     bench = MathBenchmark(args.taskfile)
 
@@ -169,7 +169,7 @@ def cmd_serve(args) -> int:
         workspace=args.workspace,
         provider_kind=args.provider,
         model=args.model,
-        enable_python=not args.no_python,
+        enable_python=args.python,
         enable_lean=args.lean,
         out_dir=args.out_dir,
     )
@@ -186,8 +186,8 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--workspace", default=None, help="evolvable workspace dir (default: ./workspace, auto-created from the bundled seed)")
     common.add_argument("--provider", default="litellm", choices=["litellm", "mock"])
     common.add_argument("--model", default=None, help="LiteLLM model id, e.g. anthropic/claude-opus-4-6")
-    common.add_argument("--no-python", action="store_true", help="disable the Python tool")
-    common.add_argument("--lean", action="store_true", help="enable Lean verification (M3)")
+    common.add_argument("--python", action="store_true", help="enable the Python (sympy) verification tool")
+    common.add_argument("--lean", action="store_true", help="enable Lean verification")
     common.add_argument("--max-steps", type=int, default=8)
 
     sub = p.add_subparsers(dest="cmd", required=True)
